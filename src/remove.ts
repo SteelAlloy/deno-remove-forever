@@ -6,7 +6,19 @@ interface RemoveOptions extends standards.options {
   ignoreErrors?: boolean;
 }
 
-export default async function remove(path: string, options?: RemoveOptions) {
+/** Removes the named file or directory forever without possible recovery.
+ *
+ * ```ts
+ * await remove("/path/to/empty_dir/or/file");
+ * await remove("/path/to/populated_dir/or/file", { standard: standards.schneier, ignoreErrors: true });
+ * ```
+ * Default standard is `forever`.
+ *
+ * Throws error if permission denied, path not found, or checksum is incorrect
+ * and the `ignoreErrors` option isn't set to `true`.
+ *
+ * Requires `allow-write` and `allow-read` permission.*/
+export async function remove(path: string, options?: RemoveOptions) {
   const fileInfo = await Deno.stat(path);
   if (fileInfo.isFile) {
     return removeFile(path, options);

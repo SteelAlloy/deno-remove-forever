@@ -8,8 +8,13 @@ export interface fileData {
 }
 
 export class DataWriter {
+
+  /** Changes the buffer that will be written to the file.
+   * This method should be overwritten. */
   static getValues(p: Uint8Array): void {}
 
+  /** Retrieves information about the file.
+   * This function is mandatory. */
   static async init(path: string): Promise<fileData> {
     const fileInfo = await Deno.stat(path);
     if (!fileInfo.isFile) {
@@ -20,6 +25,8 @@ export class DataWriter {
     return { path, size, checksum };
   }
 
+  /** Writes the buffer to the file.
+   * The data is copied from a custom Reader. */
   static async write(fileData: fileData, data?: any) {
     const dest = await Deno.open(fileData.path, { write: true });
     fileData.checksum = new hash.Sha256();
@@ -45,6 +52,8 @@ export class DataWriter {
     dest.close();
   }
 
+  /** Checks that the file was correctly written.
+   * Will read the file and compares the checksums. */
   static async verify(fileData: fileData) {
     const src = await Deno.open(fileData.path, { read: true });
     const checksum = new hash.Sha256();
@@ -58,12 +67,14 @@ export class DataWriter {
   }
 }
 
+/** Writes cryptographically strong pseudo-random data. */
 export class Random extends DataWriter {
   static getValues(p: Uint8Array): void {
     crypto.getRandomValues(p);
   }
 }
 
+/** Writes one cryptographically strong pseudo-random byte on the whole file. */
 export class RandomByte extends DataWriter {
   static getValues(p: Uint8Array): void {
     const byte = new Uint8Array(1);
@@ -72,18 +83,21 @@ export class RandomByte extends DataWriter {
   }
 }
 
+/** Writes zeros on the whole file. */
 export class Zero extends DataWriter {
   static getValues(p: Uint8Array): void {
     p.fill(0x000000);
   }
 }
 
+/** Writes ones on the whole file. */
 export class One extends DataWriter {
   static getValues(p: Uint8Array): void {
     p.fill(0xFFFFFF);
   }
 }
 
+/** Writes one byte on the whole file. */
 export class Byte extends DataWriter {
   static async write(fileData: fileData, byte: number) {
     this.getValues = function (p: Uint8Array) {
@@ -93,6 +107,7 @@ export class Byte extends DataWriter {
   }
 }
 
+/** Writes an array of bytes on the whole file. */
 export class ByteArray extends DataWriter {
   static async write(fileData: fileData, byteArray: number[]) {
     const length = byteArray.length;
@@ -105,7 +120,10 @@ export class ByteArray extends DataWriter {
   }
 }
 
+/** Changes different file properties. */
 export class FileProperties {
+
+  /** Renames the file to a random string (uuid v4). */
   static async rename(fileData: fileData) {
     const newName = uuid.v4.generate();
     const newPath = path.join(path.dirname(fileData.path), newName);
@@ -113,28 +131,34 @@ export class FileProperties {
     fileData.path = newPath;
   }
 
+  /** Truncates to between 25% and 75% of the file size. */
   static async truncate(fileData: fileData) {
     const newSize = Math.floor((0.25 + Math.random() * 0.5) * fileData.size);
     await Deno.truncate(fileData.path, newSize);
     fileData.size = newSize;
   }
 
-/*   static async resetTimestamps(fileData: fileData) {
-    await Deno.utime(fileData.path, new Date(0), new Date(0));
-  }
+  // ! Unstable
+  /** Reset file timestamps to `1970-01-01T00:00:00.000Z`. */
+  // static async resetTimestamps(fileData: fileData) {
+  //   await Deno.utime(fileData.path, new Date(0), new Date(0));
+  // }
 
-  static async changeTimestamps(
-    fileData: fileData,
-    { date1 = new Date(0), date2 = new Date() }: {
-      date1?: Date;
-      date2?: Date;
-    } = {},
-  ) {
-    const date = new Date(randomValueBetween(date2.getTime(), date1.getTime()));
-    await Deno.utime(fileData.path, date, date);
-  } */
+  // ! Unstable
+  /** Randomize file timestamps to a random value between `date1` and `date2`.
+   * Setting the same value to `date1` and `date2` will take away the randomness. */
+  // static async changeTimestamps(
+  //   fileData: fileData,
+  //   { date1 = new Date(0), date2 = new Date() }: {
+  //     date1?: Date;
+  //     date2?: Date;
+  //   } = {},
+  // ) {
+  //   const date = new Date(randomValueBetween(date2.getTime(), date1.getTime()));
+  //   await Deno.utime(fileData.path, date, date);
+  // }
 }
 
-/* function randomValueBetween(min: number, max: number) {
+function randomValueBetween(min: number, max: number) {
   return Math.random() * (max - min) + min;
-} */
+}
