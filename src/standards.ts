@@ -1,3 +1,4 @@
+import { logger } from "./logger.ts";
 import {
   DataWriter,
   Random,
@@ -9,10 +10,6 @@ import {
   FileProperties,
   fileData,
 } from "./writer.ts";
-
-export interface options {
-  retries?: number;
-}
 
 /** Contains the index of all standards. */
 export const index = {
@@ -61,7 +58,7 @@ export const index = {
     await DataWriter.verify(fileData);
     await FileProperties.rename(fileData);
     await FileProperties.truncate(fileData);
-    // await FileProperties.changeTimestamps(fileData);
+    // await FileProperties.changeTimestamps(fileData); // ! Unstable
   }),
 
   /** ### NEW ZEALAND INFORMATION AND COMMUNICATIONS TECHNOLOGY STANDARD NZSIT 402
@@ -81,7 +78,7 @@ export const index = {
    * 1    | Overwriting the data with a random character as well as verifying the writing of this character.
    * 
    * It is worth mentioning that the ISM 6.2.92 overwrites a drive with a size of less than 15 GB by a three-time overwriting with a random character. */
-  "ISM-6.2.92": (file: string, options?: options) => {
+  "ISM-6.2.92": (file: string, options: options) => {
     return index["NZSIT-402"](file, options);
   },
 
@@ -91,7 +88,7 @@ export const index = {
    * ---- | ------
    * 1    | Overwriting the data with a zero;
    * 2    | Overwriting the data with a random character. */
-  "GOST_R50739-95": standard(async (fileData: fileData) => {
+  "GOST-R50739-95": standard(async (fileData: fileData) => {
     await Zero.write(fileData);
     await RandomByte.write(fileData);
   }),
@@ -117,7 +114,7 @@ export const index = {
    * 1    | Overwriting the data with a zero;
    * 2    | Overwriting the data with a one;
    * 3    | Overwriting the data with a random character as well as verifying the writing of this character. */
-  "HMG-IS5": (file: string, options?: options) => {
+  "HMG-IS5": (file: string, options: options) => {
     return index["AFSSI-5020"](file, options);
   },
 
@@ -128,7 +125,7 @@ export const index = {
    * 1    | Overwriting the data with a zero or a one;
    * 2    | Overwriting the data with the opposite sign (if in the first pass a one, then zero is used, if in the first pass a zero, then one is used);
    * 3    | Overwriting the data with a random character as well as verifying the writing of this character. */
-  "CSEC_ITSG-06": standard(async (fileData: fileData) => {
+  "CSEC-ITSG-06": standard(async (fileData: fileData) => {
     const bool = getRandomByte() < 128;
     if (bool) {
       await Zero.write(fileData);
@@ -148,8 +145,8 @@ export const index = {
    * 1    | Overwriting the data with a defined character (e.g., one);
    * 2    | Overwriting the data with the opposite of the defined character (e.g., zero);
    * 3    | Overwriting the data with a random character as well as verifying the writing of this character. */
-  "NAVOS_5239-26": (file: string, options?: options) => {
-    return index["CSEC_ITSG-06"](file, options);
+  "NAVOS-5239-26": (file: string, options: options) => {
+    return index["CSEC-ITSG-06"](file, options);
   },
 
   /** ### STANDARD OF THE AMERICAN DEPARTMENT OF DEFENSE (DOD 5220.22 M)
@@ -159,7 +156,7 @@ export const index = {
    * 1    | Overwriting the data with a zero as well as checking the writing of this character;
    * 2    | Overwriting the data with a one and checking the writing of this character;
    * 3    | Overwriting the data with a random character as well as verifying the writing of this character. */
-  "DOD_5220.22 M": standard(async (fileData: fileData) => {
+  "DOD-5220.22-M": standard(async (fileData: fileData) => {
     await Zero.write(fileData);
     await DataWriter.verify(fileData);
     await One.write(fileData);
@@ -175,8 +172,8 @@ export const index = {
    * 1    | Overwriting the data with a zero as well as verifying the writing of this character;
    * 2    | Overwriting the data with a one and verifying the writing of this character;
    * 3    | Overwriting the data with a random character as well as verifying the writing of this character. */
-  "NCSC-TG-025": (file: string, options?: options) => {
-    return index["DOD_5220.22 M"](file, options);
+  "NCSC-TG-025": (file: string, options: options) => {
+    return index["DOD-5220.22-M"](file, options);
   },
 
   /** ### U.S. ARMY AR380-19
@@ -202,7 +199,7 @@ export const index = {
    * 2    | Overwriting the data with a one;
    * 3-6  | Same as 1-2;
    * 7    | Overwriting the data with a random character as well as review the writing of this character. */
-  "RCMP_TSSIT_OPS-II": standard(async (fileData: fileData) => {
+  "RCMP-TSSIT-OPS-II": standard(async (fileData: fileData) => {
     for (let i = 0; i < 3; i++) {
       await Zero.write(fileData);
       await One.write(fileData);
@@ -289,16 +286,17 @@ export const index = {
 
 /** Transforms a list of steps into a function that accepts path and options. */
 function standard(steps: (fileData: fileData) => Promise<void>) {
-  return async function (file: string, options?: options) {
-    let retries = options?.retries ?? 3;
+  return async function (file: string, options: options) {
+    let retries = options.retries
     let error;
     do {
       try {
         const fileData = await DataWriter.init(file);
         await steps(fileData);
-        // await Deno.remove(fileData.path);
+        await Deno.remove(fileData.path);
         error = null;
       } catch (err) {
+        logger.warning(file)
         error = err;
         retries--;
       }
@@ -311,4 +309,8 @@ function standard(steps: (fileData: fileData) => Promise<void>) {
 
 function getRandomByte() {
   return crypto.getRandomValues(new Uint8Array(1))[0];
+}
+
+export interface options {
+  retries: number;
 }

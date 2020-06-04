@@ -6,5 +6,5 @@ import * as hash from "https://deno.land/std/hash/sha256.ts"; // ! Unstable
 export {
   fs,
   uuid,
-  hash
+  hash,
 };
