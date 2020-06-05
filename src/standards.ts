@@ -16,7 +16,15 @@ export const index = {
   /** 
    * PASS | ACTION
    * ---- | ------
-   * Pass 1: Your data is overwritten with cryptographically strong pseudo-random data. (The data is indistinguishable from random noise.) */
+   * 0    | The file is deleted without any security. */
+  "unsafe": async (file: string, _options: options) => {
+    await Deno.remove(file)
+  },
+
+  /** 
+   * PASS | ACTION
+   * ---- | ------
+   * 1    | Your data is overwritten with cryptographically strong pseudo-random data. (The data is indistinguishable from random noise.) */
   "random": standard(async (fileData: fileData) => {
     await Random.write(fileData);
   }),
@@ -24,7 +32,7 @@ export const index = {
   /** 
    * PASS | ACTION
    * ---- | ------
-   * Pass 1: Overwriting the data with a random character. */
+   * 1    | Overwriting the data with a random character. */
   "randomByte": standard(async (fileData: fileData) => {
     await RandomByte.write(fileData);
   }),
@@ -32,7 +40,7 @@ export const index = {
   /** 
    * PASS | ACTION
    * ---- | ------
-   * Pass 1: Overwriting the data with a zero. */
+   * 1    | Overwriting the data with a zero. */
   "zero": standard(async (fileData: fileData) => {
     await One.write(fileData);
   }),
@@ -40,7 +48,7 @@ export const index = {
   /** 
    * PASS | ACTION
    * ---- | ------
-   * Pass 1: Overwriting the data with a one. */
+   * 1    | Overwriting the data with a one. */
   "one": standard(async (fileData: fileData) => {
     await One.write(fileData);
   }),
@@ -287,22 +295,27 @@ export const index = {
 /** Transforms a list of steps into a function that accepts path and options. */
 function standard(steps: (fileData: fileData) => Promise<void>) {
   return async function (file: string, options: options) {
-    let retries = options.retries
+    let retries = options.retries;
+    let retryNeeded = false;
     let error;
     do {
       try {
         const fileData = await DataWriter.init(file);
         await steps(fileData);
         await Deno.remove(fileData.path);
-        error = null;
+        retryNeeded = false;
       } catch (err) {
-        logger.warning(file)
+        retryNeeded = true;
         error = err;
         retries--;
+        logger.warning();
       }
-    } while (error && (retries > 0));
-    if (error) {
+    } while (retryNeeded && (retries > 0));
+    if (error && retryNeeded) {
       return Promise.reject(error);
+    }
+    if (error) {
+      logger.warn(file, error);
     }
   };
 }

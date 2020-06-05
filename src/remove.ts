@@ -18,10 +18,9 @@ export async function remove(path: string, options?: RemoveOptions) {
   const fileInfo = await Deno.stat(path);
 
   const parsedOptions: ParsedOptions = {
-    standard: standards.index.forever,
-    ignoreErrors: false,
-    retries: 3,
-    ...options,
+    standard: options?.standard ?? standards.index.forever,
+    ignoreErrors: options?.ignoreErrors ?? false,
+    retries: options?.retries ?? 3,
   };
 
   if (fileInfo.isFile) {
@@ -71,17 +70,22 @@ async function removeFolder(root: string, options: ParsedOptions) {
   }
 
   if (rejected.length > 0 && !options.ignoreErrors) {
+    console.log("reject");
     return Promise.reject(rejected);
   }
 
-  logger.info("", "Final cleanup.");
+  logger.info("Final cleanup.");
+
   await Deno.remove(root, { recursive: true });
 
   return files - rejected.length;
 }
 
 interface ParsedOptions extends standards.options {
-  standard: (file: string, options: standards.options) => Promise<undefined>;
+  standard: (
+    file: string,
+    options: standards.options,
+  ) => Promise<void | undefined>;
   ignoreErrors: boolean;
 }
 
