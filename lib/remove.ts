@@ -1,5 +1,5 @@
 import { fs } from "./deps.ts";
-import * as standards from "./standards.ts";
+import { fileStandards, options, directoryStandards } from "./standards.ts";
 import { logger } from "./logger.ts";
 
 /** Removes the named file or directory forever without possible recovery.
@@ -18,7 +18,8 @@ export async function remove(path: string, options?: RemoveOptions) {
   const fileInfo = await Deno.stat(path);
 
   const parsedOptions: ParsedOptions = {
-    standard: options?.standard ?? standards.fileStandards.forever,
+    fileStandard: options?.fileStandard ?? fileStandards.forever.remove,
+    directoryStandard: options?.directoryStandard ?? directoryStandards.forever.remove,
     ignoreErrors: options?.ignoreErrors ?? false,
     retries: options?.retries ?? 3,
   };
@@ -26,7 +27,7 @@ export async function remove(path: string, options?: RemoveOptions) {
   if (fileInfo.isFile) {
     return removeFile(path, parsedOptions);
   } else if (fileInfo.isDirectory) {
-    return removeFolder(path, parsedOptions);
+    return removeDirectory(path, parsedOptions);
   } else {
     await Deno.remove(path);
     return NaN;
@@ -35,13 +36,11 @@ export async function remove(path: string, options?: RemoveOptions) {
 
 async function removeFile(file: string, options: ParsedOptions) {
   try {
-    await options.standard(file, options);
-    logger.info(`Successfully deleted ${file}`);
+    await options.fileStandard(file, options);
   } catch (reason) {
-    if (!options.ignoreErrors) {
-      logger.error(`${reason}: ${file}`);
+    if (options.ignoreErrors === false) {
       return Promise.reject([{
-        file: file,
+        path: file,
         reason,
       }]);
     }
@@ -50,41 +49,80 @@ async function removeFile(file: string, options: ParsedOptions) {
   return 1;
 }
 
-async function removeFolder(root: string, options: ParsedOptions) {
-  const rejected: rejected = [];
-  let files = 0;
+async function removeDirectory(dir: string, options: ParsedOptions) {
+  const files: string[] = [];
+  const directories: string[] = [];
 
-  for await (const entry of fs.walk(root, { includeDirs: false })) {
-    const file: string = entry.path;
-    files++;
+  for await (const entry of fs.walk(dir, { includeDirs: false })) {
+    files.push(entry.path);
+  }
+  for await (const entry of fs.walk(dir, { includeFiles: false })) {
+    directories.push(entry.path);
+  }
+
+  const fileTasks = files.map((file) => options.fileStandard(file, options));
+  const rejectedFiles: rejected = await getRejected(fileTasks, files);
+
+  if (rejectedFiles.length > 0 && options.ignoreErrors === false) {
+    throw rejectedFiles;
+  }
+
+  const rejectedDirectories: rejected = [];
+
+  for (let i = directories.length - 1; i > -1; i--) {
+    const directory = directories[i];
     try {
-      await options.standard(file, options);
-      logger.removed(file);
+      await options.directoryStandard(directory, options);
     } catch (reason) {
-      logger.error(file, reason);
-      rejected.push({
-        file: file,
+      rejectedDirectories.push({
+        path: directory,
         reason,
       });
     }
   }
 
-  if (rejected.length > 0 && !options.ignoreErrors) {
-    console.log("reject");
-    return Promise.reject(rejected);
+  if (rejectedDirectories.length > 0 && options.ignoreErrors === false) {
+    throw rejectedDirectories;
   }
 
-  logger.info("Final cleanup.");
+  if (rejectedDirectories.length > 0 || rejectedFiles.length > 0) {
+    logger.info("Final cleanup.");
+    await Deno.remove(dir, { recursive: true });
+  }
 
-  await Deno.remove(root, { recursive: true });
-
-  return files - rejected.length;
+  return files.length + directories.length -
+    rejectedFiles.length - rejectedDirectories.length;
 }
 
-interface ParsedOptions extends standards.options {
-  standard: (
+async function getRejected(
+  tasks: Promise<void | undefined>[],
+  paths: string[],
+) {
+  const results = await Promise.allSettled(tasks);
+
+  return results.map((result, index) => {
+    if (result.status === "rejected") {
+      return {
+        path: paths[index],
+        reason: result.reason,
+      };
+    } else {
+      return {
+        path: "",
+        reason: null,
+      };
+    }
+  }).filter((result) => result.reason !== null);
+}
+
+interface ParsedOptions extends options {
+  fileStandard: (
     file: string,
-    options: standards.options,
+    options: options,
+  ) => Promise<void | undefined>;
+  directoryStandard: (
+    dir: string,
+    options: options,
   ) => Promise<void | undefined>;
   ignoreErrors: boolean;
 }
@@ -92,6 +130,6 @@ interface ParsedOptions extends standards.options {
 export type RemoveOptions = Partial<ParsedOptions>;
 
 type rejected = {
-  file: string;
+  path: string;
   reason: any;
 }[];

@@ -28,7 +28,7 @@ export const fileStandards = {
    * PASS | ACTION
    * ---- | ------
    * 1    | Your data is overwritten with cryptographically strong pseudo-random data. (The data is indistinguishable from random noise.) */
-  "random": fileStandard(async (fileData: FileData) => {
+  "random": fileStandard(1, async (fileData: FileData) => {
     await Random.write(fileData);
   }),
 
@@ -36,7 +36,7 @@ export const fileStandards = {
    * PASS | ACTION
    * ---- | ------
    * 1    | Overwriting the data with a random character. */
-  "randomByte": fileStandard(async (fileData: FileData) => {
+  "randomByte": fileStandard(1, async (fileData: FileData) => {
     await RandomByte.write(fileData);
   }),
 
@@ -44,7 +44,7 @@ export const fileStandards = {
    * PASS | ACTION
    * ---- | ------
    * 1    | Overwriting the data with a zero. */
-  "zero": fileStandard(async (fileData: FileData) => {
+  "zero": fileStandard(1, async (fileData: FileData) => {
     await One.write(fileData);
   }),
 
@@ -52,7 +52,7 @@ export const fileStandards = {
    * PASS | ACTION
    * ---- | ------
    * 1    | Overwriting the data with a one. */
-  "one": fileStandard(async (fileData: FileData) => {
+  "one": fileStandard(1, async (fileData: FileData) => {
     await One.write(fileData);
   }),
 
@@ -64,7 +64,7 @@ export const fileStandards = {
    * . | Renaming the file with random data;
    * . | Truncating between 25% and 75% of the file;
    * . | Randomize file timestamps. */
-  "forever": fileStandard(async (fileData: FileData) => {
+  "forever": fileStandard(4, async (fileData: FileData) => {
     FileWriter.verifyNext(fileData);
     await Random.write(fileData);
     await FileProperties.rename(fileData);
@@ -77,7 +77,7 @@ export const fileStandards = {
    * PASS | ACTION
    * ---- | ------
    * 1    | Overwriting the data with a random character as well as verifying the writing of this character. */
-  "NZSIT-402": fileStandard(async (fileData: FileData) => {
+  "NZSIT-402": fileStandard(2, async (fileData: FileData) => {
     FileWriter.verifyNext(fileData);
     await RandomByte.write(fileData);
   }),
@@ -90,7 +90,7 @@ export const fileStandards = {
    * 
    * It is worth mentioning that the ISM 6.2.92 overwrites a drive with a size of less than 15 GB by a three-time overwriting with a random character. */
   "ISM-6.2.92": (file: string, options: options) => {
-    return fileStandards["NZSIT-402"](file, options);
+    return fileStandards["NZSIT-402"].remove(file, options);
   },
 
   /** ### RUSSIAN STATE STANDARD GOST R 50739-95 (RUSSIAN: ГОСТ P 50739-95)
@@ -99,7 +99,7 @@ export const fileStandards = {
    * ---- | ------
    * 1    | Overwriting the data with a zero;
    * 2    | Overwriting the data with a random character. */
-  "GOST-R50739-95": fileStandard(async (fileData: FileData) => {
+  "GOST-R50739-95": fileStandard(2, async (fileData: FileData) => {
     await Zero.write(fileData);
     await RandomByte.write(fileData);
   }),
@@ -111,7 +111,7 @@ export const fileStandards = {
    * 1    | Overwriting the data with a zero;
    * 2    | Overwriting the data with a one;
    * 3    | Overwriting the data with a random character as well as verifying the writing of this character. */
-  "AFSSI-5020": fileStandard(async (fileData: FileData) => {
+  "AFSSI-5020": fileStandard(4, async (fileData: FileData) => {
     await Zero.write(fileData);
     await One.write(fileData);
     FileWriter.verifyNext(fileData);
@@ -126,7 +126,7 @@ export const fileStandards = {
    * 2    | Overwriting the data with a one;
    * 3    | Overwriting the data with a random character as well as verifying the writing of this character. */
   "HMG-IS5": (file: string, options: options) => {
-    return fileStandards["AFSSI-5020"](file, options);
+    return fileStandards["AFSSI-5020"].remove(file, options);
   },
 
   /** ### COMMUNICATION SECURITY ESTABLISHMENT CANADA STANDARD CSEC ITSG-06
@@ -136,7 +136,7 @@ export const fileStandards = {
    * 1    | Overwriting the data with a zero or a one;
    * 2    | Overwriting the data with the opposite sign (if in the first pass a one, then zero is used, if in the first pass a zero, then one is used);
    * 3    | Overwriting the data with a random character as well as verifying the writing of this character. */
-  "CSEC-ITSG-06": fileStandard(async (fileData: FileData) => {
+  "CSEC-ITSG-06": fileStandard(4, async (fileData: FileData) => {
     const bool = getRandomByte() < 128;
     if (bool) {
       await Zero.write(fileData);
@@ -157,7 +157,7 @@ export const fileStandards = {
    * 2    | Overwriting the data with the opposite of the defined character (e.g., zero);
    * 3    | Overwriting the data with a random character as well as verifying the writing of this character. */
   "NAVOS-5239-26": (file: string, options: options) => {
-    return fileStandards["CSEC-ITSG-06"](file, options);
+    return fileStandards["CSEC-ITSG-06"].remove(file, options);
   },
 
   /** ### STANDARD OF THE AMERICAN DEPARTMENT OF DEFENSE (DOD 5220.22 M)
@@ -167,7 +167,7 @@ export const fileStandards = {
    * 1    | Overwriting the data with a zero as well as checking the writing of this character;
    * 2    | Overwriting the data with a one and checking the writing of this character;
    * 3    | Overwriting the data with a random character as well as verifying the writing of this character. */
-  "DOD-5220.22-M": fileStandard(async (fileData: FileData) => {
+  "DOD-5220.22-M": fileStandard(6, async (fileData: FileData) => {
     FileWriter.verifyNext(fileData);
     await Zero.write(fileData);
     FileWriter.verifyNext(fileData);
@@ -184,7 +184,7 @@ export const fileStandards = {
    * 2    | Overwriting the data with a one and verifying the writing of this character;
    * 3    | Overwriting the data with a random character as well as verifying the writing of this character. */
   "NCSC-TG-025": (file: string, options: options) => {
-    return fileStandards["DOD-5220.22-M"](file, options);
+    return fileStandards["DOD-5220.22-M"].remove(file, options);
   },
 
   /** ### U.S. ARMY AR380-19
@@ -194,7 +194,7 @@ export const fileStandards = {
    * 1    | Overwriting the data with a random character;
    * 2    | Overwriting the data with a defined character (e.g., zero);
    * 3    | Overwriting the data with the opposite of the random character (e.g., one), and verifying the writing of that character. */
-  "AR380-19": fileStandard(async (fileData: FileData) => {
+  "AR380-19": fileStandard(4, async (fileData: FileData) => {
     await RandomByte.write(fileData);
     const byte = getRandomByte();
     await Byte.write(fileData, byte);
@@ -210,7 +210,7 @@ export const fileStandards = {
    * 2    | Overwriting the data with a one;
    * 3-6  | Same as 1-2;
    * 7    | Overwriting the data with a random character as well as review the writing of this character. */
-  "RCMP-TSSIT-OPS-II": fileStandard(async (fileData: FileData) => {
+  "RCMP-TSSIT-OPS-II": fileStandard(8, async (fileData: FileData) => {
     for (let i = 0; i < 3; i++) {
       await Zero.write(fileData);
       await One.write(fileData);
@@ -227,7 +227,7 @@ export const fileStandards = {
    * 2    | Overwriting the data with a one;
    * 3-6  | Same as 1-2;
    * 7    | Overwriting the data with a random character. */
-  "VSITR": fileStandard(async (fileData: FileData) => {
+  "VSITR": fileStandard(7, async (fileData: FileData) => {
     for (let i = 0; i < 3; i++) {
       await Zero.write(fileData);
       await One.write(fileData);
@@ -242,7 +242,7 @@ export const fileStandards = {
    * 1    | Overwriting the data with a zero;
    * 2    | Overwriting the data with a one;
    * 3-7  | Overwriting the data with a random character. */
-  "schneier": fileStandard(async (fileData: FileData) => {
+  "schneier": fileStandard(7, async (fileData: FileData) => {
     await Zero.write(fileData);
     await One.write(fileData);
     for (let i = 0; i < 5; i++) {
@@ -253,7 +253,7 @@ export const fileStandards = {
   /** ### PFITZNER METHOD
    * 
    * Pass 1 to Pass 33: Overwriting the data with a random character. */
-  "pfitzner": fileStandard(async (fileData: FileData) => {
+  "pfitzner": fileStandard(33, async (fileData: FileData) => {
     for (let i = 0; i < 33; i++) {
       await RandomByte.write(fileData);
     }
@@ -271,7 +271,7 @@ export const fileStandards = {
    * 26-28| Same as 7-9;
    * 29-31| Overwriting with `0x6D 0xB6 0xDB`, then cycling through the bytes;
    * 32-35| Overwriting with random data. */
-  "gutmann": fileStandard(async (fileData: FileData) => {
+  "gutmann": fileStandard(35, async (fileData: FileData) => {
     for (let i = 0; i < 4; i++) {
       await Random.write(fileData);
     }
@@ -311,70 +311,76 @@ export const directoryStandards = {
    * ---- | ------
    * . | Renaming the file with random data;
    * . | Randomize file timestamps. */
-  "forever": directoryStandard(async (dirData: DirData) => {
+  "forever": directoryStandard(1, async (dirData: DirData) => {
     await DirectoryProperties.rename(dirData);
     // await DirectoryProperties.changeTimestamps(fileData); // ! Unstable
   }),
 };
 
 /** Transforms a list of steps into a function that accepts path and options. */
-function fileStandard(steps: (fileData: FileData) => Promise<void>) {
-  return async function (file: string, options: options) {
-    let retries = options.retries;
-    let retryNeeded = false;
-    let error;
-    do {
-      try {
-        const fileData = await FileWriter.init(file);
-        await steps(fileData);
-        await Deno.remove(fileData.path);
-        retryNeeded = false;
-      } catch (err) {
-        retryNeeded = true;
-        error = err;
-        retries--;
-        logger.warning(file);
+function fileStandard(stepsCount: number, steps: (fileData: FileData) => Promise<void>) {
+  return {
+    stepsCount,
+    async remove (file: string, options: options) {
+      let retries = options.retries;
+      let retryNeeded = false;
+      let error;
+      do {
+        try {
+          const fileData = await FileWriter.init(file);
+          await steps(fileData);
+          await Deno.remove(fileData.path);
+          retryNeeded = false;
+        } catch (err) {
+          retryNeeded = true;
+          error = err;
+          retries--;
+          logger.warning(file);
+        }
+      } while (retryNeeded && (retries > 0));
+      if (error && retryNeeded) {
+        logger.error(file, error);
+        throw error;
       }
-    } while (retryNeeded && (retries > 0));
-    if (error && retryNeeded) {
-      logger.error(file, error);
-      throw error;
+      if (error) {
+        logger.warn(file, error);
+      }
+      logger.removed(file);
     }
-    if (error) {
-      logger.warn(file, error);
-    }
-    logger.removed(file);
-  };
+  }
 }
 
 /** Transforms a list of steps into a function that accepts path and options. */
-function directoryStandard(steps: (dirData: DirData) => Promise<void>) {
-  return async function (dir: string, options: options) {
-    let { retries } = options;
-    let retryNeeded = false;
-    let error;
-    do {
-      try {
-        const dirData = await DirectoryWriter.init(dir);
-        await steps(dirData);
-        await Deno.remove(dirData.path);
-        retryNeeded = false;
-      } catch (err) {
-        error = err;
-        retries--;
-        logger.warning(dir);
-        retryNeeded = true;
+function directoryStandard(stepsCount: number, steps: (dirData: DirData) => Promise<void>) {
+  return {
+    stepsCount,
+    async remove (dir: string, options: options) {
+      let { retries } = options;
+      let retryNeeded = false;
+      let error;
+      do {
+        try {
+          const dirData = await DirectoryWriter.init(dir);
+          await steps(dirData);
+          await Deno.remove(dirData.path);
+          retryNeeded = false;
+        } catch (err) {
+          error = err;
+          retries--;
+          logger.warning(dir);
+          retryNeeded = true;
+        }
+      } while (retryNeeded && (retries > 0));
+      if (error && retryNeeded) {
+        logger.error(dir, error);
+        throw error;
       }
-    } while (retryNeeded && (retries > 0));
-    if (error && retryNeeded) {
-      logger.error(dir, error);
-      throw error;
+      if (error) {
+        logger.warn(dir, error);
+      }
+      logger.removed(dir);
     }
-    if (error) {
-      logger.warn(dir, error);
-    }
-    logger.removed(dir);
-  };
+  }
 }
 
 function getRandomByte() {
