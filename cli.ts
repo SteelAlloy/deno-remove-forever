@@ -67,6 +67,7 @@ const standard = commandOptions.standard
   : undefined;
 
 const progress = setProgressBar();
+progress.render(completed);
 
 setLogger();
 
@@ -139,8 +140,6 @@ function setProgressBar() {
 }
 
 function setLogger() {
-  progress.render(completed);
-
   if (commandOptions.debug) {
     logger.debug = (msg) => {
       progress.console(printDebug(msg));

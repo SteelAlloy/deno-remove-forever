@@ -11,7 +11,7 @@ import {
   ByteArray,
   FileProperties,
   FileData,
-  DirData
+  DirData,
 } from "./writer.ts";
 
 /** Contains the index of all file standards. */
@@ -305,7 +305,7 @@ export const directoryStandards = {
     await Deno.remove(dir);
   },
 
-    /** ### REMOVE-FOREVER STANDARD
+  /** ### REMOVE-FOREVER STANDARD
    * 
    * PASS | ACTION
    * ---- | ------
@@ -315,8 +315,7 @@ export const directoryStandards = {
     await DirectoryProperties.rename(dirData);
     // await DirectoryProperties.changeTimestamps(fileData); // ! Unstable
   }),
-
-}
+};
 
 /** Transforms a list of steps into a function that accepts path and options. */
 function fileStandard(steps: (fileData: FileData) => Promise<void>) {
@@ -334,22 +333,24 @@ function fileStandard(steps: (fileData: FileData) => Promise<void>) {
         retryNeeded = true;
         error = err;
         retries--;
-        logger.warning();
+        logger.warning(file);
       }
     } while (retryNeeded && (retries > 0));
     if (error && retryNeeded) {
-      throw error
+      logger.error(file, error);
+      throw error;
     }
     if (error) {
       logger.warn(file, error);
     }
+    logger.removed(file);
   };
 }
 
 /** Transforms a list of steps into a function that accepts path and options. */
 function directoryStandard(steps: (dirData: DirData) => Promise<void>) {
   return async function (dir: string, options: options) {
-    let retries = options.retries;
+    let { retries } = options;
     let retryNeeded = false;
     let error;
     do {
@@ -359,18 +360,20 @@ function directoryStandard(steps: (dirData: DirData) => Promise<void>) {
         await Deno.remove(dirData.path);
         retryNeeded = false;
       } catch (err) {
-        retryNeeded = true;
         error = err;
         retries--;
-        logger.warning();
+        logger.warning(dir);
+        retryNeeded = true;
       }
     } while (retryNeeded && (retries > 0));
     if (error && retryNeeded) {
-      throw error
+      logger.error(dir, error);
+      throw error;
     }
     if (error) {
       logger.warn(dir, error);
     }
+    logger.removed(dir);
   };
 }
 

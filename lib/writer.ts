@@ -12,12 +12,15 @@ export class FileWriter {
   static async init(path: string): Promise<FileData> {
     logger.start(path);
     const fileInfo = await Deno.stat(path);
-    if (!fileInfo.isFile) {
-      return Promise.reject("The specified path is not a file.");
+
+    if (fileInfo.isFile === false) {
+      throw new Error("The specified path is not a file.");
     }
-    const size = fileInfo.size;
+
+    const { size } = fileInfo;
     const checksum = new hash.Sha256();
     const verifyChecksum = false;
+
     return { path, size, checksum, verifyChecksum };
   }
 
@@ -25,13 +28,14 @@ export class FileWriter {
    * The data is copied from a custom Reader. */
   static async write(fileData: FileData, data?: any) {
     const dest = await Deno.open(fileData.path, { write: true });
-    const getValues = this.getValues;
+    const { getValues } = this;
 
     const src: Deno.Reader = {
       read(p: Uint8Array): Promise<number | null> {
         return new Promise((resolve) => {
           const length = Math.min(p.byteLength, fileData.size);
           fileData.size -= length;
+
           if (length === 0) {
             resolve(null);
           } else {
@@ -44,8 +48,10 @@ export class FileWriter {
         });
       },
     };
+
     await Deno.copy(src, dest);
     dest.close();
+
     if (fileData.verifyChecksum) {
       fileData.verifyChecksum = false;
       await this.verify(fileData);
@@ -61,13 +67,16 @@ export class FileWriter {
 
   /** For internal use only */
   static async verify(fileData: FileData) {
-    logger.debug(`Checksum verification: ${fileData.path}`);
+    logger.debug(fileData.path, "Checksum verification");
+
     const src = await Deno.open(fileData.path, { read: true });
     const checksum = new hash.Sha256();
+
     for await (const chunk of Deno.iter(src)) {
       checksum.update(chunk);
     }
     src.close();
+
     if (fileData.checksum.hex() !== checksum.hex()) {
       return Promise.reject("Invalid checksum");
     }
@@ -81,7 +90,7 @@ export class Random extends FileWriter {
   }
 
   static async write(fileData: FileData) {
-    logger.debug(`Random called: ${fileData.path}`);
+    logger.debug(fileData.path, "Random called");
     await super.write(fileData);
   }
 }
@@ -95,7 +104,7 @@ export class RandomByte extends FileWriter {
   }
 
   static async write(fileData: FileData) {
-    logger.debug(`RandomByte called: ${fileData.path}`);
+    logger.debug(fileData.path, "RandomByte called");
     await super.write(fileData);
   }
 }
@@ -107,7 +116,7 @@ export class Zero extends FileWriter {
   }
 
   static async write(fileData: FileData) {
-    logger.debug(`Zero called: ${fileData.path}`);
+    logger.debug(fileData.path, "Zero called");
     await super.write(fileData);
   }
 }
@@ -119,7 +128,7 @@ export class One extends FileWriter {
   }
 
   static async write(fileData: FileData) {
-    logger.debug(`One called: ${fileData.path}`);
+    logger.debug(fileData.path, "One called");
     await super.write(fileData);
   }
 }
@@ -127,7 +136,7 @@ export class One extends FileWriter {
 /** Writes one byte on the whole file. */
 export class Byte extends FileWriter {
   static async write(fileData: FileData, byte: number) {
-    logger.debug(`Byte called with ${byte}: ${fileData.path}`);
+    logger.debug(fileData.path, `Byte called with ${byte}`);
     this.getValues = function (p: Uint8Array) {
       p.fill(byte);
     };
@@ -138,8 +147,8 @@ export class Byte extends FileWriter {
 /** Writes an array of bytes on the whole file. */
 export class ByteArray extends FileWriter {
   static async write(fileData: FileData, byteArray: number[]) {
-    logger.debug(`ByteArray called with ${byteArray}: ${fileData.path}`);
-    const length = byteArray.length;
+    logger.debug(fileData.path, `ByteArray called with ${byteArray}`);
+    const { length } = byteArray;
     this.getValues = function (p: Uint8Array) {
       for (let i = 0; i < p.length; i++) {
         p[i] = byteArray[i % length];
@@ -153,7 +162,7 @@ export class ByteArray extends FileWriter {
 export class FileProperties {
   /** Renames the file to a random string (uuid v4). */
   static async rename(fileData: FileData) {
-    logger.debug(`Rename called: ${fileData.path}`);
+    logger.debug(fileData.path, "Rename called");
     const newName = uuid.v4.generate();
     const newPath = path.join(path.dirname(fileData.path), newName);
     await Deno.rename(fileData.path, newPath);
@@ -162,7 +171,7 @@ export class FileProperties {
 
   /** Truncates to between 25% and 75% of the file size. */
   static async truncate(fileData: FileData) {
-    logger.debug(`Truncate called: ${fileData.path}`);
+    logger.debug(fileData.path, "Truncate called");
     const newSize = Math.floor((0.25 + Math.random() * 0.5) * fileData.size);
     await Deno.truncate(fileData.path, newSize);
     fileData.size = newSize;
@@ -171,7 +180,7 @@ export class FileProperties {
   // ! Unstable
   // /** Reset file timestamps to `1970-01-01T00:00:00.000Z`. */
   // static async resetTimestamps(fileData: FileData) {
-  //   logger.debug(`ResetTimestamps called: ${fileData.path}`)
+  //   logger.debug(fileData.path, "ResetTimestamps called")
   //   await Deno.utime(fileData.path, new Date(0), new Date(0));
   // }
 
@@ -185,7 +194,7 @@ export class FileProperties {
   //     date2?: Date;
   //   } = {},
   // ) {
-  //   logger.debug(`ChangeTimestamps called: ${fileData.path}`)
+  //   logger.debug(fileData.path, "ChangeTimestamps called")
   //   const date = new Date(randomValueBetween(date2.getTime(), date1.getTime()));
   //   await Deno.utime(fileData.path, date, date);
   // }
@@ -198,7 +207,7 @@ export class DirectoryWriter {
     logger.start(path);
     const fileInfo = await Deno.stat(path);
     if (fileInfo.isDirectory === false) {
-      return Promise.reject("The specified path is not a directory.");
+      throw new Error("The specified path is not a directory.");
     }
     return { path };
   }
@@ -207,7 +216,7 @@ export class DirectoryWriter {
 export class DirectoryProperties {
   /** Renames the directory to a random string (uuid v4). */
   static async rename(dirData: DirData) {
-    logger.debug(`Rename called: ${dirData.path}`);
+    logger.debug(dirData.path, "Rename called");
     const newName = uuid.v4.generate();
     const newPath = path.join(path.dirname(dirData.path), newName);
     await Deno.rename(dirData.path, newPath);
@@ -215,9 +224,9 @@ export class DirectoryProperties {
   }
 
   // ! Unstable
-  // /** Reset file timestamps to `1970-01-01T00:00:00.000Z`. */
+  /** Reset file timestamps to `1970-01-01T00:00:00.000Z`. */
   // static async resetTimestamps(dirData: DirData) {
-  //   logger.debug(`ResetTimestamps called: ${dirData.path}`)
+  //   logger.debug(dirData.path, "ResetTimestamps called")
   //   await Deno.utime(dirData.path, new Date(0), new Date(0));
   // }
 
@@ -231,7 +240,7 @@ export class DirectoryProperties {
   //     date2?: Date;
   //   } = {},
   // ) {
-  //   logger.debug(`ChangeTimestamps called: ${dirData.path}`)
+  //   logger.debug(dirData.path, "ChangeTimestamps called")
   //   const date = new Date(randomValueBetween(date2.getTime(), date1.getTime()));
   //   await Deno.utime(dirData.path, date, date);
   // }

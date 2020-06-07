@@ -1,6 +1,4 @@
-import { remove } from "./lib/remove.ts";
-import { index as standards } from "./lib/standards.ts";
-import * as writer from "./lib/writer.ts";
-
+export * as writer from "./lib/writer.ts";
+export { fileStandards, directoryStandards } from "./lib/standards.ts";
+export { remove } from "./lib/remove.ts";
 export default remove;
-export { writer, standards };
