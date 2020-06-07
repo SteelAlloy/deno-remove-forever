@@ -1,6 +1,8 @@
 import { logger } from "./logger.ts";
 import {
-  DataWriter,
+  FileWriter,
+  DirectoryWriter,
+  DirectoryProperties,
   Random,
   RandomByte,
   Zero,
@@ -8,24 +10,25 @@ import {
   Byte,
   ByteArray,
   FileProperties,
-  fileData,
+  FileData,
+  DirData
 } from "./writer.ts";
 
-/** Contains the index of all standards. */
-export const index = {
+/** Contains the index of all file standards. */
+export const fileStandards = {
   /** 
    * PASS | ACTION
    * ---- | ------
    * 0    | The file is deleted without any security. */
   "unsafe": async (file: string, _options: options) => {
-    await Deno.remove(file)
+    await Deno.remove(file);
   },
 
   /** 
    * PASS | ACTION
    * ---- | ------
    * 1    | Your data is overwritten with cryptographically strong pseudo-random data. (The data is indistinguishable from random noise.) */
-  "random": standard(async (fileData: fileData) => {
+  "random": fileStandard(async (fileData: FileData) => {
     await Random.write(fileData);
   }),
 
@@ -33,7 +36,7 @@ export const index = {
    * PASS | ACTION
    * ---- | ------
    * 1    | Overwriting the data with a random character. */
-  "randomByte": standard(async (fileData: fileData) => {
+  "randomByte": fileStandard(async (fileData: FileData) => {
     await RandomByte.write(fileData);
   }),
 
@@ -41,7 +44,7 @@ export const index = {
    * PASS | ACTION
    * ---- | ------
    * 1    | Overwriting the data with a zero. */
-  "zero": standard(async (fileData: fileData) => {
+  "zero": fileStandard(async (fileData: FileData) => {
     await One.write(fileData);
   }),
 
@@ -49,7 +52,7 @@ export const index = {
    * PASS | ACTION
    * ---- | ------
    * 1    | Overwriting the data with a one. */
-  "one": standard(async (fileData: fileData) => {
+  "one": fileStandard(async (fileData: FileData) => {
     await One.write(fileData);
   }),
 
@@ -58,12 +61,12 @@ export const index = {
    * PASS | ACTION
    * ---- | ------
    * 1    | Overwriting the data with cryptographically strong pseudo-random data as well as verifying the writing of the data;
-   * Then | Renaming the file with random data;
-   * Then | Truncating between 25% and 75% of the file;
-   * Then | Randomize file timestamps. */
-  "forever": standard(async (fileData: fileData) => {
+   * . | Renaming the file with random data;
+   * . | Truncating between 25% and 75% of the file;
+   * . | Randomize file timestamps. */
+  "forever": fileStandard(async (fileData: FileData) => {
+    FileWriter.verifyNext(fileData);
     await Random.write(fileData);
-    await DataWriter.verify(fileData);
     await FileProperties.rename(fileData);
     await FileProperties.truncate(fileData);
     // await FileProperties.changeTimestamps(fileData); // ! Unstable
@@ -74,9 +77,9 @@ export const index = {
    * PASS | ACTION
    * ---- | ------
    * 1    | Overwriting the data with a random character as well as verifying the writing of this character. */
-  "NZSIT-402": standard(async (fileData: fileData) => {
+  "NZSIT-402": fileStandard(async (fileData: FileData) => {
+    FileWriter.verifyNext(fileData);
     await RandomByte.write(fileData);
-    await DataWriter.verify(fileData);
   }),
 
   /** ### AUSTRALIAN INFORMATION SECURITY MANUAL STANDARD ISM 6.2.92
@@ -87,7 +90,7 @@ export const index = {
    * 
    * It is worth mentioning that the ISM 6.2.92 overwrites a drive with a size of less than 15 GB by a three-time overwriting with a random character. */
   "ISM-6.2.92": (file: string, options: options) => {
-    return index["NZSIT-402"](file, options);
+    return fileStandards["NZSIT-402"](file, options);
   },
 
   /** ### RUSSIAN STATE STANDARD GOST R 50739-95 (RUSSIAN: ГОСТ P 50739-95)
@@ -96,7 +99,7 @@ export const index = {
    * ---- | ------
    * 1    | Overwriting the data with a zero;
    * 2    | Overwriting the data with a random character. */
-  "GOST-R50739-95": standard(async (fileData: fileData) => {
+  "GOST-R50739-95": fileStandard(async (fileData: FileData) => {
     await Zero.write(fileData);
     await RandomByte.write(fileData);
   }),
@@ -108,11 +111,11 @@ export const index = {
    * 1    | Overwriting the data with a zero;
    * 2    | Overwriting the data with a one;
    * 3    | Overwriting the data with a random character as well as verifying the writing of this character. */
-  "AFSSI-5020": standard(async (fileData: fileData) => {
+  "AFSSI-5020": fileStandard(async (fileData: FileData) => {
     await Zero.write(fileData);
     await One.write(fileData);
+    FileWriter.verifyNext(fileData);
     await RandomByte.write(fileData);
-    await DataWriter.verify(fileData);
   }),
 
   /** ### BRITISH HMG INFOSEC STANDARD 5
@@ -123,7 +126,7 @@ export const index = {
    * 2    | Overwriting the data with a one;
    * 3    | Overwriting the data with a random character as well as verifying the writing of this character. */
   "HMG-IS5": (file: string, options: options) => {
-    return index["AFSSI-5020"](file, options);
+    return fileStandards["AFSSI-5020"](file, options);
   },
 
   /** ### COMMUNICATION SECURITY ESTABLISHMENT CANADA STANDARD CSEC ITSG-06
@@ -133,7 +136,7 @@ export const index = {
    * 1    | Overwriting the data with a zero or a one;
    * 2    | Overwriting the data with the opposite sign (if in the first pass a one, then zero is used, if in the first pass a zero, then one is used);
    * 3    | Overwriting the data with a random character as well as verifying the writing of this character. */
-  "CSEC-ITSG-06": standard(async (fileData: fileData) => {
+  "CSEC-ITSG-06": fileStandard(async (fileData: FileData) => {
     const bool = getRandomByte() < 128;
     if (bool) {
       await Zero.write(fileData);
@@ -142,8 +145,8 @@ export const index = {
       await One.write(fileData);
       await Zero.write(fileData);
     }
+    FileWriter.verifyNext(fileData);
     await RandomByte.write(fileData);
-    await DataWriter.verify(fileData);
   }),
 
   /** ### NAVY STAFF OFFICE PUBLICATION NAVSO P-5239-26
@@ -154,7 +157,7 @@ export const index = {
    * 2    | Overwriting the data with the opposite of the defined character (e.g., zero);
    * 3    | Overwriting the data with a random character as well as verifying the writing of this character. */
   "NAVOS-5239-26": (file: string, options: options) => {
-    return index["CSEC-ITSG-06"](file, options);
+    return fileStandards["CSEC-ITSG-06"](file, options);
   },
 
   /** ### STANDARD OF THE AMERICAN DEPARTMENT OF DEFENSE (DOD 5220.22 M)
@@ -164,13 +167,13 @@ export const index = {
    * 1    | Overwriting the data with a zero as well as checking the writing of this character;
    * 2    | Overwriting the data with a one and checking the writing of this character;
    * 3    | Overwriting the data with a random character as well as verifying the writing of this character. */
-  "DOD-5220.22-M": standard(async (fileData: fileData) => {
+  "DOD-5220.22-M": fileStandard(async (fileData: FileData) => {
+    FileWriter.verifyNext(fileData);
     await Zero.write(fileData);
-    await DataWriter.verify(fileData);
+    FileWriter.verifyNext(fileData);
     await One.write(fileData);
-    await DataWriter.verify(fileData);
+    FileWriter.verifyNext(fileData);
     await RandomByte.write(fileData);
-    await DataWriter.verify(fileData);
   }),
 
   /** ### NATIONAL COMPUTER SECURITY CENTER NCSC-TG-025 STANDARD
@@ -181,7 +184,7 @@ export const index = {
    * 2    | Overwriting the data with a one and verifying the writing of this character;
    * 3    | Overwriting the data with a random character as well as verifying the writing of this character. */
   "NCSC-TG-025": (file: string, options: options) => {
-    return index["DOD-5220.22-M"](file, options);
+    return fileStandards["DOD-5220.22-M"](file, options);
   },
 
   /** ### U.S. ARMY AR380-19
@@ -191,12 +194,12 @@ export const index = {
    * 1    | Overwriting the data with a random character;
    * 2    | Overwriting the data with a defined character (e.g., zero);
    * 3    | Overwriting the data with the opposite of the random character (e.g., one), and verifying the writing of that character. */
-  "AR380-19": standard(async (fileData: fileData) => {
+  "AR380-19": fileStandard(async (fileData: FileData) => {
     await RandomByte.write(fileData);
     const byte = getRandomByte();
     await Byte.write(fileData, byte);
+    FileWriter.verifyNext(fileData);
     await Byte.write(fileData, ~byte);
-    await DataWriter.verify(fileData);
   }),
 
   /** ### ROYAL CANADIAN MOUNTED POLICE TSSIT OPS-II
@@ -207,13 +210,13 @@ export const index = {
    * 2    | Overwriting the data with a one;
    * 3-6  | Same as 1-2;
    * 7    | Overwriting the data with a random character as well as review the writing of this character. */
-  "RCMP-TSSIT-OPS-II": standard(async (fileData: fileData) => {
+  "RCMP-TSSIT-OPS-II": fileStandard(async (fileData: FileData) => {
     for (let i = 0; i < 3; i++) {
       await Zero.write(fileData);
       await One.write(fileData);
     }
+    FileWriter.verifyNext(fileData);
     await RandomByte.write(fileData);
-    await DataWriter.verify(fileData);
   }),
 
   /** ### STANDARD OF THE FEDERAL OFFICE FOR INFORMATION SECURITY (BSI-VSITR)
@@ -224,7 +227,7 @@ export const index = {
    * 2    | Overwriting the data with a one;
    * 3-6  | Same as 1-2;
    * 7    | Overwriting the data with a random character. */
-  "VSITR": standard(async (fileData: fileData) => {
+  "VSITR": fileStandard(async (fileData: FileData) => {
     for (let i = 0; i < 3; i++) {
       await Zero.write(fileData);
       await One.write(fileData);
@@ -239,7 +242,7 @@ export const index = {
    * 1    | Overwriting the data with a zero;
    * 2    | Overwriting the data with a one;
    * 3-7  | Overwriting the data with a random character. */
-  "schneier": standard(async (fileData: fileData) => {
+  "schneier": fileStandard(async (fileData: FileData) => {
     await Zero.write(fileData);
     await One.write(fileData);
     for (let i = 0; i < 5; i++) {
@@ -250,7 +253,7 @@ export const index = {
   /** ### PFITZNER METHOD
    * 
    * Pass 1 to Pass 33: Overwriting the data with a random character. */
-  "pfitzner": standard(async (fileData: fileData) => {
+  "pfitzner": fileStandard(async (fileData: FileData) => {
     for (let i = 0; i < 33; i++) {
       await RandomByte.write(fileData);
     }
@@ -268,7 +271,7 @@ export const index = {
    * 26-28| Same as 7-9;
    * 29-31| Overwriting with `0x6D 0xB6 0xDB`, then cycling through the bytes;
    * 32-35| Overwriting with random data. */
-  "gutmann": standard(async (fileData: fileData) => {
+  "gutmann": fileStandard(async (fileData: FileData) => {
     for (let i = 0; i < 4; i++) {
       await Random.write(fileData);
     }
@@ -292,15 +295,38 @@ export const index = {
   }),
 };
 
+/** Contains the index of all file standards. */
+export const directoryStandards = {
+  /** 
+   * PASS | ACTION
+   * ---- | ------
+   * 0    | The directory is deleted without any security. */
+  "unsafe": async (dir: string, _options: options) => {
+    await Deno.remove(dir);
+  },
+
+    /** ### REMOVE-FOREVER STANDARD
+   * 
+   * PASS | ACTION
+   * ---- | ------
+   * . | Renaming the file with random data;
+   * . | Randomize file timestamps. */
+  "forever": directoryStandard(async (dirData: DirData) => {
+    await DirectoryProperties.rename(dirData);
+    // await DirectoryProperties.changeTimestamps(fileData); // ! Unstable
+  }),
+
+}
+
 /** Transforms a list of steps into a function that accepts path and options. */
-function standard(steps: (fileData: fileData) => Promise<void>) {
+function fileStandard(steps: (fileData: FileData) => Promise<void>) {
   return async function (file: string, options: options) {
     let retries = options.retries;
     let retryNeeded = false;
     let error;
     do {
       try {
-        const fileData = await DataWriter.init(file);
+        const fileData = await FileWriter.init(file);
         await steps(fileData);
         await Deno.remove(fileData.path);
         retryNeeded = false;
@@ -312,10 +338,38 @@ function standard(steps: (fileData: fileData) => Promise<void>) {
       }
     } while (retryNeeded && (retries > 0));
     if (error && retryNeeded) {
-      return Promise.reject(error);
+      throw error
     }
     if (error) {
       logger.warn(file, error);
+    }
+  };
+}
+
+/** Transforms a list of steps into a function that accepts path and options. */
+function directoryStandard(steps: (dirData: DirData) => Promise<void>) {
+  return async function (dir: string, options: options) {
+    let retries = options.retries;
+    let retryNeeded = false;
+    let error;
+    do {
+      try {
+        const dirData = await DirectoryWriter.init(dir);
+        await steps(dirData);
+        await Deno.remove(dirData.path);
+        retryNeeded = false;
+      } catch (err) {
+        retryNeeded = true;
+        error = err;
+        retries--;
+        logger.warning();
+      }
+    } while (retryNeeded && (retries > 0));
+    if (error && retryNeeded) {
+      throw error
+    }
+    if (error) {
+      logger.warn(dir, error);
     }
   };
 }

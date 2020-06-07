@@ -8,5 +8,5 @@ export {
   fs,
   uuid,
   hash,
-  path
+  path,
 };

@@ -4,10 +4,10 @@ import { Command } from "https://deno.land/x/cliffy/command.ts";
 import { Confirm } from "https://deno.land/x/cliffy/prompt.ts";
 import { AnsiEscape } from "https://deno.land/x/cliffy/ansi-escape.ts";
 import ProgressBar from "https://deno.land/x/progress/mod.ts";
-import { fs } from "./src/deps.ts";
-import { remove } from "./src/remove.ts";
-import { index } from "./src/standards.ts";
-import { logger } from "./src/logger.ts";
+import { fs } from "./lib/deps.ts";
+import { remove } from "./lib/remove.ts";
+import { fileStandards } from "./lib/standards.ts";
+import { logger } from "./lib/logger.ts";
 import {
   bgGreen,
   bgYellow,
@@ -31,9 +31,9 @@ const { options: commandOptions, args: commandArgs } = await new Command<
     "Text ID of the standard, default is `forever`.",
     {
       value: (value: string) => {
-        if (Object.keys(index).indexOf(value) === -1) {
+        if (Object.keys(fileStandards).indexOf(value) === -1) {
           throw new Error(
-            `Standard must be one of: ${Object.keys(index)} but got: ${value}`,
+            `Standard must be one of: ${Object.keys(fileStandards)} but got: ${value}`,
           );
         }
         return value;
@@ -56,10 +56,14 @@ const { options: commandOptions, args: commandArgs } = await new Command<
 let total = await getTotal();
 let completed = 0;
 
+if (total === 0) {
+  Deno.exit(0);
+}
+
 await confirm();
 
 const standard = commandOptions.standard
-  ? index[commandOptions.standard]
+  ? fileStandards[commandOptions.standard]
   : undefined;
 
 const progress = setProgressBar();
@@ -69,11 +73,8 @@ setLogger();
 try {
   await run();
 } catch (err) {
-  if (typeof err !== "object") {
+  if (!Array.isArray(err)) {
     progress.console(printError(err));
-    AnsiEscape.from(Deno.stdout).eraseLine();
-  } else if (err.name) {
-    progress.console(printError(err.name));
     AnsiEscape.from(Deno.stdout).eraseLine();
   }
   if (!commandOptions.ignoreErrors) {
@@ -186,25 +187,25 @@ function setLogger() {
 }
 
 function printError(msg: string) {
-  return bold(bgRed(" ERROR ") + " " + red(msg));
+  return bold(bgRed(" ERROR ") + red(` ${msg}`));
 }
 
 function printWarn(msg: string) {
-  return bold(bgYellow(black(" WARN "))) + "  " + yellow(msg);
+  return bold(bgYellow(black(" WARN "))) + yellow(`  ${msg}`);
 }
 
 function printDebug(msg: string) {
-  return bold((" DEBUG ") + " " + msg);
+  return bold(" DEBUG ") + ` ${msg}`;
 }
 
 function printInfo(msg: string) {
-  return bold(bgCyan(" INFO ")) + "  " + msg;
+  return bold(bgCyan(" INFO ")) + `  ${msg}`;
 }
 
 type Arguments = [string];
 
 interface Options {
-  standard?: keyof typeof index;
+  standard?: keyof typeof fileStandards;
   retries?: number;
   prompt?: boolean;
   ignoreErrors?: boolean;

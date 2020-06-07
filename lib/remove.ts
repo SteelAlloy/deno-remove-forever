@@ -18,7 +18,7 @@ export async function remove(path: string, options?: RemoveOptions) {
   const fileInfo = await Deno.stat(path);
 
   const parsedOptions: ParsedOptions = {
-    standard: options?.standard ?? standards.index.forever,
+    standard: options?.standard ?? standards.fileStandards.forever,
     ignoreErrors: options?.ignoreErrors ?? false,
     retries: options?.retries ?? 3,
   };
