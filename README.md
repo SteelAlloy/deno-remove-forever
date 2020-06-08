@@ -28,7 +28,7 @@ It goes from a simple pass of zeros to a 35 passes algorithm. Remove-forever com
 
 ## ✨ Features
 
-Remove-forever is composed of two parts: a Node.js module with a straightforward API and a [command line interface](https://www.npmjs.com/package/secure-rm-cli) optimized to delete files on the fly.
+Remove-forever is composed of two parts: a deno module with a straightforward API and a command line interface optimized to delete files on the fly.
 
 
 * [Choose your standard]()
@@ -44,7 +44,7 @@ Remove-forever is composed of two parts: a Node.js module with a straightforward
 [Deno](https://deno.land/#installation) required.
 
 ```shell
-deno install --allow-write --allow-read --unstable -n removef https://deno.land/x/remove-forever/cli.ts
+deno install --allow-write --allow-read --unstable -n remove https://deno.land/x/remove-forever/cli.ts
 ```
 
 ## 🚀 Quick Start
