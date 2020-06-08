@@ -19,7 +19,8 @@ export async function remove(path: string, options?: RemoveOptions) {
 
   const parsedOptions: ParsedOptions = {
     fileStandard: options?.fileStandard ?? fileStandards.forever.remove,
-    directoryStandard: options?.directoryStandard ?? directoryStandards.forever.remove,
+    directoryStandard: options?.directoryStandard ??
+      directoryStandards.forever.remove,
     ignoreErrors: options?.ignoreErrors ?? false,
     retries: options?.retries ?? 3,
   };

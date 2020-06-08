@@ -6,7 +6,7 @@ import { AnsiEscape } from "https://deno.land/x/cliffy/ansi-escape.ts";
 import ProgressBar from "https://deno.land/x/progress/mod.ts";
 import { fs } from "./lib/deps.ts";
 import { remove } from "./lib/remove.ts";
-import { fileStandards } from "./lib/standards.ts";
+import { fileStandards, directoryStandards } from "./lib/standards.ts";
 import { logger } from "./lib/logger.ts";
 import {
   bgGreen,
@@ -33,7 +33,9 @@ const { options: commandOptions, args: commandArgs } = await new Command<
       value: (value: string) => {
         if (Object.keys(fileStandards).indexOf(value) === -1) {
           throw new Error(
-            `Standard must be one of: ${Object.keys(fileStandards)} but got: ${value}`,
+            `Standard must be one of: ${
+              Object.keys(fileStandards)
+            } but got: ${value}`,
           );
         }
         return value;
@@ -53,19 +55,24 @@ const { options: commandOptions, args: commandArgs } = await new Command<
   .option("-d, --debug", "Output extra debugging.")
   .parse(Deno.args);
 
-let total = await getTotal();
-let completed = 0;
+const { fileMap, directoryMap, fileCount, directoryCount } = await getTotal();
 
-if (total === 0) {
+if (fileCount + directoryCount === 0) {
   Deno.exit(0);
 }
 
 await confirm();
 
-const standard = commandOptions.standard
+const fileStandard = commandOptions.standard
   ? fileStandards[commandOptions.standard]
-  : undefined;
+  : fileStandards.forever;
 
+const directoryStandard = commandOptions.standard
+  ? directoryStandards[commandOptions.standard] ?? directoryStandards.unsafe
+  : directoryStandards.forever;
+
+let completed = 0;
+let deleted = 0
 const progress = setProgressBar();
 progress.render(completed);
 
@@ -90,7 +97,8 @@ async function run() {
     const deleted = await remove(
       root,
       {
-        standard,
+        fileStandard: fileStandard.remove,
+        directoryStandard: directoryStandard.remove,
         retries: commandOptions.retries,
         ignoreErrors: commandOptions.ignoreErrors,
       },
@@ -100,7 +108,10 @@ async function run() {
 }
 
 async function getTotal() {
-  let total = 0;
+  let fileCount = 0;
+  let directoryCount = 0;
+  const fileMap: ObjectMap = {};
+  const directoryMap: ObjectMap = {};
   for (let i = 0; i < commandArgs[0].length; i++) {
     const root = commandArgs[0][i];
     let fileInfo;
@@ -114,42 +125,53 @@ async function getTotal() {
 
     if (fileInfo.isDirectory) {
       for await (const entry of fs.walk(root, { includeDirs: false })) {
-        total++;
+        fileMap[entry.path] = 0;
+        fileCount++;
+      }
+      for await (const entry of fs.walk(root, { includeFiles: false })) {
+        directoryMap[entry.path] = 0;
+        directoryCount++;
       }
     } else {
-      total++;
+      fileMap[root] = 0; // ! potential issue: wrong path
     }
   }
-  return total;
+  return { fileMap, directoryMap, fileCount, directoryCount };
 }
 
 async function confirm() {
   const yes = await Confirm.prompt(
-    `${total} files will be removed from system. Do you want to continue?`,
+    `${fileCount +
+      directoryCount} files and folders will be removed from system. Do you want to continue?`,
   );
 
-  if (!yes) Deno.exit();
+  if (yes === false) Deno.exit();
 }
 
 function setProgressBar() {
+  const total = fileCount * (fileStandard.stepsCount + 2) +
+    directoryCount * (directoryStandard.stepsCount + 2);
   return new ProgressBar({
     total,
     clear: true,
-    display: ":percent :bar :time :completed/:total :title",
+    display: ":percent :bar :time :title",
   });
 }
 
 function setLogger() {
-  if (commandOptions.debug) {
-    logger.debug = (msg) => {
-      progress.console(printDebug(msg));
-    };
-  }
-
-  logger.start = (file) => {
-    if (commandOptions.info) {
-      progress.console(`Processed file: ${file}`);
+  logger.debug = (path, object: string, msg: string) => {
+    if (commandOptions.debug) {
+      progress.console(printDebug(`${msg}: ${path}`));
     }
+    progress.render(++completed);
+  };
+
+  logger.start = (path, object: string) => {
+    if (commandOptions.info) {
+      progress.console(printInfo(`Processed: ${path}`));
+    }
+    progress.render(++completed);
+    getMap(object)[path]++;
   };
 
   logger.info = (msg) => {
@@ -158,30 +180,40 @@ function setLogger() {
     }
   };
 
-  logger.removed = (file) => {
+  logger.removed = (path, object: string) => {
     if (commandOptions.info) {
-      progress.console(`Successfully deleted ${file}`);
+      progress.console(printInfo(`Successfully deleted ${path}`));
     }
     progress.render(++completed, {
       complete: bgGreen(" "),
+      title: `${++deleted} objects deleted`
     });
+    getMap(object)[path]++;
+
   };
 
-  logger.warn = (file, reason) => {
-    progress.console(printWarn(`${reason}: ${file}`));
+  logger.warn = (path, object: string, reason) => {
+    progress.console(printWarn(`${reason}: ${path}`));
   };
 
-  logger.warning = () => {
+  logger.warning = (path, object: string) => {
+    completed -= getMap(object)[path];
     progress.render(completed, {
       complete: bgYellow(" "),
     });
+    getMap(object)[path] = 0;
   };
 
-  logger.error = (file, reason) => {
-    progress.console(printError(`${reason}: ${file}`));
+  logger.error = (path, object: string, reason) => {
+    progress.console(printError(`${reason}: ${path}`));
     progress.render(++completed, {
       complete: bgRed(" "),
     });
+    if (object === "file") {
+      completed += fileStandard.stepsCount - getMap(object)[path];
+    } else if (object === "dir") {
+      completed += directoryStandard.stepsCount - getMap(object)[path];
+    }
   };
 }
 
@@ -201,7 +233,24 @@ function printInfo(msg: string) {
   return bold(bgCyan(" INFO ")) + `  ${msg}`;
 }
 
+function getMap(object: string) {
+  switch (object) {
+    case "file":
+      return fileMap;
+
+    case "dir":
+      return directoryMap;
+
+    default:
+      throw "Unsupported OS object";
+  }
+}
+
 type Arguments = [string];
+
+type ObjectMap = {
+  [key: string]: number;
+};
 
 interface Options {
   standard?: keyof typeof fileStandards;

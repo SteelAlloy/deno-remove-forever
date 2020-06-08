@@ -15,13 +15,16 @@ import {
 } from "./writer.ts";
 
 /** Contains the index of all file standards. */
-export const fileStandards = {
+export const fileStandards: FileStandards = {
   /** 
    * PASS | ACTION
    * ---- | ------
    * 0    | The file is deleted without any security. */
-  "unsafe": async (file: string, _options: options) => {
-    await Deno.remove(file);
+  "unsafe": {
+    stepsCount: 0,
+    async remove(file: string, _options: options) {
+      await Deno.remove(file);
+    },
   },
 
   /** 
@@ -89,8 +92,11 @@ export const fileStandards = {
    * 1    | Overwriting the data with a random character as well as verifying the writing of this character.
    * 
    * It is worth mentioning that the ISM 6.2.92 overwrites a drive with a size of less than 15 GB by a three-time overwriting with a random character. */
-  "ISM-6.2.92": (file: string, options: options) => {
-    return fileStandards["NZSIT-402"].remove(file, options);
+  "ISM-6.2.92": {
+    stepsCount: 2,
+    async remove(file: string, options: options) {
+      return fileStandards["NZSIT-402"].remove(file, options);
+    },
   },
 
   /** ### RUSSIAN STATE STANDARD GOST R 50739-95 (RUSSIAN: ГОСТ P 50739-95)
@@ -125,8 +131,11 @@ export const fileStandards = {
    * 1    | Overwriting the data with a zero;
    * 2    | Overwriting the data with a one;
    * 3    | Overwriting the data with a random character as well as verifying the writing of this character. */
-  "HMG-IS5": (file: string, options: options) => {
-    return fileStandards["AFSSI-5020"].remove(file, options);
+  "HMG-IS5": {
+    stepsCount: 4,
+    async remove(file: string, options: options) {
+      return fileStandards["AFSSI-5020"].remove(file, options);
+    },
   },
 
   /** ### COMMUNICATION SECURITY ESTABLISHMENT CANADA STANDARD CSEC ITSG-06
@@ -156,8 +165,11 @@ export const fileStandards = {
    * 1    | Overwriting the data with a defined character (e.g., one);
    * 2    | Overwriting the data with the opposite of the defined character (e.g., zero);
    * 3    | Overwriting the data with a random character as well as verifying the writing of this character. */
-  "NAVOS-5239-26": (file: string, options: options) => {
-    return fileStandards["CSEC-ITSG-06"].remove(file, options);
+  "NAVOS-5239-26": {
+    stepsCount: 4,
+    async remove(file: string, options: options) {
+      return fileStandards["CSEC-ITSG-06"].remove(file, options);
+    },
   },
 
   /** ### STANDARD OF THE AMERICAN DEPARTMENT OF DEFENSE (DOD 5220.22 M)
@@ -183,8 +195,11 @@ export const fileStandards = {
    * 1    | Overwriting the data with a zero as well as verifying the writing of this character;
    * 2    | Overwriting the data with a one and verifying the writing of this character;
    * 3    | Overwriting the data with a random character as well as verifying the writing of this character. */
-  "NCSC-TG-025": (file: string, options: options) => {
-    return fileStandards["DOD-5220.22-M"].remove(file, options);
+  "NCSC-TG-025": {
+    stepsCount: 6,
+    async remove(file: string, options: options) {
+      return fileStandards["DOD-5220.22-M"].remove(file, options);
+    },
   },
 
   /** ### U.S. ARMY AR380-19
@@ -296,13 +311,16 @@ export const fileStandards = {
 };
 
 /** Contains the index of all file standards. */
-export const directoryStandards = {
+export const directoryStandards: DirectoryStandards = {
   /** 
    * PASS | ACTION
    * ---- | ------
    * 0    | The directory is deleted without any security. */
-  "unsafe": async (dir: string, _options: options) => {
-    await Deno.remove(dir);
+  "unsafe": {
+    stepsCount: 1,
+    async remove(dir: string, _options: options) {
+      await Deno.remove(dir);
+    },
   },
 
   /** ### REMOVE-FOREVER STANDARD
@@ -318,10 +336,13 @@ export const directoryStandards = {
 };
 
 /** Transforms a list of steps into a function that accepts path and options. */
-function fileStandard(stepsCount: number, steps: (fileData: FileData) => Promise<void>) {
+function fileStandard(
+  stepsCount: number,
+  steps: (fileData: FileData) => Promise<void>,
+) {
   return {
     stepsCount,
-    async remove (file: string, options: options) {
+    async remove(file: string, options: options) {
       let retries = options.retries;
       let retryNeeded = false;
       let error;
@@ -335,26 +356,29 @@ function fileStandard(stepsCount: number, steps: (fileData: FileData) => Promise
           retryNeeded = true;
           error = err;
           retries--;
-          logger.warning(file);
+          logger.warning(file, "file");
         }
       } while (retryNeeded && (retries > 0));
       if (error && retryNeeded) {
-        logger.error(file, error);
+        logger.error(file, "file", error);
         throw error;
       }
       if (error) {
-        logger.warn(file, error);
+        logger.warn(file, "file", error);
       }
-      logger.removed(file);
-    }
-  }
+      logger.removed(file, "file");
+    },
+  };
 }
 
 /** Transforms a list of steps into a function that accepts path and options. */
-function directoryStandard(stepsCount: number, steps: (dirData: DirData) => Promise<void>) {
+function directoryStandard(
+  stepsCount: number,
+  steps: (dirData: DirData) => Promise<void>,
+) {
   return {
     stepsCount,
-    async remove (dir: string, options: options) {
+    async remove(dir: string, options: options) {
       let { retries } = options;
       let retryNeeded = false;
       let error;
@@ -367,20 +391,20 @@ function directoryStandard(stepsCount: number, steps: (dirData: DirData) => Prom
         } catch (err) {
           error = err;
           retries--;
-          logger.warning(dir);
+          logger.warning(dir, "dir");
           retryNeeded = true;
         }
       } while (retryNeeded && (retries > 0));
       if (error && retryNeeded) {
-        logger.error(dir, error);
+        logger.error(dir, "dir", error);
         throw error;
       }
       if (error) {
-        logger.warn(dir, error);
+        logger.warn(dir, "dir", error);
       }
-      logger.removed(dir);
-    }
-  }
+      logger.removed(dir, "dir");
+    },
+  };
 }
 
 function getRandomByte() {
@@ -390,3 +414,21 @@ function getRandomByte() {
 export interface options {
   retries: number;
 }
+
+type FileStandard = {
+  stepsCount: number;
+  remove(file: string, options: options): Promise<void | undefined>;
+};
+
+type FileStandards = {
+  [key: string]: FileStandard;
+};
+
+type DirectoryStandard = {
+  stepsCount: number;
+  remove(file: string, options: options): Promise<void | undefined>;
+};
+
+type DirectoryStandards = {
+  [key: string]: DirectoryStandard;
+};

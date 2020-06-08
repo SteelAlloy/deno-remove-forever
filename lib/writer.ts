@@ -10,7 +10,7 @@ export class FileWriter {
   /** Retrieves information about the file.
    * This function is mandatory. */
   static async init(path: string): Promise<FileData> {
-    logger.start(path);
+    logger.start(path, "file");
     const fileInfo = await Deno.stat(path);
 
     if (fileInfo.isFile === false) {
@@ -67,7 +67,7 @@ export class FileWriter {
 
   /** For internal use only */
   static async verify(fileData: FileData) {
-    logger.debug(fileData.path, "Checksum verification");
+    logger.debug(fileData.path, "file", "Checksum verification");
 
     const src = await Deno.open(fileData.path, { read: true });
     const checksum = new hash.Sha256();
@@ -90,7 +90,7 @@ export class Random extends FileWriter {
   }
 
   static async write(fileData: FileData) {
-    logger.debug(fileData.path, "Random called");
+    logger.debug(fileData.path, "file", "Randomizing");
     await super.write(fileData);
   }
 }
@@ -104,7 +104,7 @@ export class RandomByte extends FileWriter {
   }
 
   static async write(fileData: FileData) {
-    logger.debug(fileData.path, "RandomByte called");
+    logger.debug(fileData.path, "file", "RandomByte");
     await super.write(fileData);
   }
 }
@@ -116,7 +116,7 @@ export class Zero extends FileWriter {
   }
 
   static async write(fileData: FileData) {
-    logger.debug(fileData.path, "Zero called");
+    logger.debug(fileData.path, "file", "Zero");
     await super.write(fileData);
   }
 }
@@ -128,7 +128,7 @@ export class One extends FileWriter {
   }
 
   static async write(fileData: FileData) {
-    logger.debug(fileData.path, "One called");
+    logger.debug(fileData.path, "file", "One");
     await super.write(fileData);
   }
 }
@@ -136,7 +136,7 @@ export class One extends FileWriter {
 /** Writes one byte on the whole file. */
 export class Byte extends FileWriter {
   static async write(fileData: FileData, byte: number) {
-    logger.debug(fileData.path, `Byte called with ${byte}`);
+    logger.debug(fileData.path, "file", `Byte: ${byte}`);
     this.getValues = function (p: Uint8Array) {
       p.fill(byte);
     };
@@ -147,7 +147,7 @@ export class Byte extends FileWriter {
 /** Writes an array of bytes on the whole file. */
 export class ByteArray extends FileWriter {
   static async write(fileData: FileData, byteArray: number[]) {
-    logger.debug(fileData.path, `ByteArray called with ${byteArray}`);
+    logger.debug(fileData.path, "file", `ByteArray: ${byteArray}`);
     const { length } = byteArray;
     this.getValues = function (p: Uint8Array) {
       for (let i = 0; i < p.length; i++) {
@@ -162,7 +162,7 @@ export class ByteArray extends FileWriter {
 export class FileProperties {
   /** Renames the file to a random string (uuid v4). */
   static async rename(fileData: FileData) {
-    logger.debug(fileData.path, "Rename called");
+    logger.debug(fileData.path, "file", "Renaming");
     const newName = uuid.v4.generate();
     const newPath = path.join(path.dirname(fileData.path), newName);
     await Deno.rename(fileData.path, newPath);
@@ -171,7 +171,7 @@ export class FileProperties {
 
   /** Truncates to between 25% and 75% of the file size. */
   static async truncate(fileData: FileData) {
-    logger.debug(fileData.path, "Truncate called");
+    logger.debug(fileData.path, "file", "Truncating");
     const newSize = Math.floor((0.25 + Math.random() * 0.5) * fileData.size);
     await Deno.truncate(fileData.path, newSize);
     fileData.size = newSize;
@@ -180,7 +180,7 @@ export class FileProperties {
   // ! Unstable
   // /** Reset file timestamps to `1970-01-01T00:00:00.000Z`. */
   // static async resetTimestamps(fileData: FileData) {
-  //   logger.debug(fileData.path, "ResetTimestamps called")
+  //   logger.debug(fileData.path, "file", "ResetTimestamps called")
   //   await Deno.utime(fileData.path, new Date(0), new Date(0));
   // }
 
@@ -194,7 +194,7 @@ export class FileProperties {
   //     date2?: Date;
   //   } = {},
   // ) {
-  //   logger.debug(fileData.path, "ChangeTimestamps called")
+  //   logger.debug(fileData.path, "file", "ChangeTimestamps called")
   //   const date = new Date(randomValueBetween(date2.getTime(), date1.getTime()));
   //   await Deno.utime(fileData.path, date, date);
   // }
@@ -204,7 +204,7 @@ export class DirectoryWriter {
   /** Retrieves information about the directory.
    * This function is mandatory. */
   static async init(path: string): Promise<DirData> {
-    logger.start(path);
+    logger.start(path, "dir");
     const fileInfo = await Deno.stat(path);
     if (fileInfo.isDirectory === false) {
       throw new Error("The specified path is not a directory.");
@@ -216,7 +216,7 @@ export class DirectoryWriter {
 export class DirectoryProperties {
   /** Renames the directory to a random string (uuid v4). */
   static async rename(dirData: DirData) {
-    logger.debug(dirData.path, "Rename called");
+    logger.debug(dirData.path, "dir", "Renaming");
     const newName = uuid.v4.generate();
     const newPath = path.join(path.dirname(dirData.path), newName);
     await Deno.rename(dirData.path, newPath);
@@ -226,7 +226,7 @@ export class DirectoryProperties {
   // ! Unstable
   /** Reset file timestamps to `1970-01-01T00:00:00.000Z`. */
   // static async resetTimestamps(dirData: DirData) {
-  //   logger.debug(dirData.path, "ResetTimestamps called")
+  //   logger.debug(dirData.path, "dir", "ResetTimestamps called")
   //   await Deno.utime(dirData.path, new Date(0), new Date(0));
   // }
 
@@ -240,7 +240,7 @@ export class DirectoryProperties {
   //     date2?: Date;
   //   } = {},
   // ) {
-  //   logger.debug(dirData.path, "ChangeTimestamps called")
+  //   logger.debug(dirData.path, "dir", "ChangeTimestamps called")
   //   const date = new Date(randomValueBetween(date2.getTime(), date1.getTime()));
   //   await Deno.utime(dirData.path, date, date);
   // }
