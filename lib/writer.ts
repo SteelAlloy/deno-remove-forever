@@ -180,25 +180,25 @@ export class FileProperties {
 
   // ! Unstable
   // /** Reset file timestamps to `1970-01-01T00:00:00.000Z`. */
-  // static async resetTimestamps(fileData: FileData) {
-  //   logger.debug(fileData.path, "file", "ResetTimestamps called")
-  //   await Deno.utime(fileData.path, new Date(0), new Date(0));
-  // }
+  static async resetTimestamps(fileData: FileData) {
+    logger.debug(fileData.path, "file", "ResetTimestamps called")
+    await Deno.utime(fileData.path, new Date(0), new Date(0));
+  }
 
   // ! Unstable
   // /** Randomize file timestamps to a random value between `date1` and `date2`.
   //  * Setting the same value to `date1` and `date2` will take away the randomness. */
-  // static async changeTimestamps(
-  //   fileData: FileData,
-  //   { date1 = new Date(0), date2 = new Date() }: {
-  //     date1?: Date;
-  //     date2?: Date;
-  //   } = {},
-  // ) {
-  //   logger.debug(fileData.path, "file", "ChangeTimestamps called")
-  //   const date = new Date(randomValueBetween(date2.getTime(), date1.getTime()));
-  //   await Deno.utime(fileData.path, date, date);
-  // }
+  static async changeTimestamps(
+    fileData: FileData,
+    { date1 = new Date(0), date2 = new Date() }: {
+      date1?: Date;
+      date2?: Date;
+    } = {},
+  ) {
+    logger.debug(fileData.path, "file", "ChangeTimestamps called")
+    const date = new Date(randomValueBetween(date2.getTime(), date1.getTime()));
+    await Deno.utime(fileData.path, date, date);
+  }
 }
 
 export class DirectoryWriter {
@@ -226,25 +226,25 @@ export class DirectoryProperties {
 
   // ! Unstable
   /** Reset file timestamps to `1970-01-01T00:00:00.000Z`. */
-  // static async resetTimestamps(dirData: DirData) {
-  //   logger.debug(dirData.path, "dir", "ResetTimestamps called")
-  //   await Deno.utime(dirData.path, new Date(0), new Date(0));
-  // }
+  static async resetTimestamps(dirData: DirData) {
+    logger.debug(dirData.path, "dir", "ResetTimestamps called")
+    await Deno.utime(dirData.path, new Date(0), new Date(0));
+  }
 
   // ! Unstable
   // /** Randomize file timestamps to a random value between `date1` and `date2`.
   //  * Setting the same value to `date1` and `date2` will take away the randomness. */
-  // static async changeTimestamps(
-  //   dirData: DirData,
-  //   { date1 = new Date(0), date2 = new Date() }: {
-  //     date1?: Date;
-  //     date2?: Date;
-  //   } = {},
-  // ) {
-  //   logger.debug(dirData.path, "dir", "ChangeTimestamps called")
-  //   const date = new Date(randomValueBetween(date2.getTime(), date1.getTime()));
-  //   await Deno.utime(dirData.path, date, date);
-  // }
+  static async changeTimestamps(
+    dirData: DirData,
+    { date1 = new Date(0), date2 = new Date() }: {
+      date1?: Date;
+      date2?: Date;
+    } = {},
+  ) {
+    logger.debug(dirData.path, "dir", "ChangeTimestamps called")
+    const date = new Date(randomValueBetween(date2.getTime(), date1.getTime()));
+    await Deno.utime(dirData.path, date, date);
+  }
 }
 
 function randomValueBetween(min: number, max: number) {
