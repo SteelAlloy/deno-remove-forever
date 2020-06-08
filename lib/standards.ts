@@ -23,7 +23,9 @@ export const fileStandards: FileStandards = {
   "unsafe": {
     stepsCount: 0,
     async remove(file: string, _options: options) {
+      logger.start(file, "file");
       await Deno.remove(file);
+      logger.removed(file, "file");
     },
   },
 
@@ -92,11 +94,8 @@ export const fileStandards: FileStandards = {
    * 1    | Overwriting the data with a random character as well as verifying the writing of this character.
    * 
    * It is worth mentioning that the ISM 6.2.92 overwrites a drive with a size of less than 15 GB by a three-time overwriting with a random character. */
-  "ISM-6.2.92": {
-    stepsCount: 2,
-    async remove(file: string, options: options) {
-      return fileStandards["NZSIT-402"].remove(file, options);
-    },
+  get ["ISM-6.2.92"]() {
+    return fileStandards["NZSIT-402"];
   },
 
   /** ### RUSSIAN STATE STANDARD GOST R 50739-95 (RUSSIAN: ГОСТ P 50739-95)
@@ -131,11 +130,8 @@ export const fileStandards: FileStandards = {
    * 1    | Overwriting the data with a zero;
    * 2    | Overwriting the data with a one;
    * 3    | Overwriting the data with a random character as well as verifying the writing of this character. */
-  "HMG-IS5": {
-    stepsCount: 4,
-    async remove(file: string, options: options) {
-      return fileStandards["AFSSI-5020"].remove(file, options);
-    },
+  get ["HMG-IS5"]() {
+    return fileStandards["AFSSI-5020"];
   },
 
   /** ### COMMUNICATION SECURITY ESTABLISHMENT CANADA STANDARD CSEC ITSG-06
@@ -165,11 +161,8 @@ export const fileStandards: FileStandards = {
    * 1    | Overwriting the data with a defined character (e.g., one);
    * 2    | Overwriting the data with the opposite of the defined character (e.g., zero);
    * 3    | Overwriting the data with a random character as well as verifying the writing of this character. */
-  "NAVOS-5239-26": {
-    stepsCount: 4,
-    async remove(file: string, options: options) {
-      return fileStandards["CSEC-ITSG-06"].remove(file, options);
-    },
+  get ["NAVOS-5239-26"]() {
+    return fileStandards["CSEC-ITSG-06"];
   },
 
   /** ### STANDARD OF THE AMERICAN DEPARTMENT OF DEFENSE (DOD 5220.22 M)
@@ -195,11 +188,8 @@ export const fileStandards: FileStandards = {
    * 1    | Overwriting the data with a zero as well as verifying the writing of this character;
    * 2    | Overwriting the data with a one and verifying the writing of this character;
    * 3    | Overwriting the data with a random character as well as verifying the writing of this character. */
-  "NCSC-TG-025": {
-    stepsCount: 6,
-    async remove(file: string, options: options) {
-      return fileStandards["DOD-5220.22-M"].remove(file, options);
-    },
+  get ["NCSC-TG-025"]() {
+    return fileStandards["DOD-5220.22-M"];
   },
 
   /** ### U.S. ARMY AR380-19
@@ -295,7 +285,7 @@ export const fileStandards: FileStandards = {
     await ByteArray.write(fileData, [0x92, 0x49, 0x24]);
     await ByteArray.write(fileData, [0x49, 0x24, 0x92]);
     await ByteArray.write(fileData, [0x24, 0x92, 0x49]);
-    for (let byte = 0; byte < 0xFF; byte += 0x11) {
+    for (let byte = 0; byte <= 0xFF; byte += 0x11) {
       await Byte.write(fileData, byte);
     }
     await ByteArray.write(fileData, [0x92, 0x49, 0x24]);
@@ -317,9 +307,11 @@ export const directoryStandards: DirectoryStandards = {
    * ---- | ------
    * 0    | The directory is deleted without any security. */
   "unsafe": {
-    stepsCount: 1,
+    stepsCount: 0,
     async remove(dir: string, _options: options) {
+      logger.start(dir, "dir");
       await Deno.remove(dir);
+      logger.removed(dir, "dir");
     },
   },
 
@@ -356,7 +348,7 @@ function fileStandard(
           retryNeeded = true;
           error = err;
           retries--;
-          logger.warning(file, "file");
+          logger.warning(file, "file", error);
         }
       } while (retryNeeded && (retries > 0));
       if (error && retryNeeded) {
@@ -391,7 +383,7 @@ function directoryStandard(
         } catch (err) {
           error = err;
           retries--;
-          logger.warning(dir, "dir");
+          logger.warning(dir, "dir", error);
           retryNeeded = true;
         }
       } while (retryNeeded && (retries > 0));

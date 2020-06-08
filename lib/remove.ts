@@ -40,10 +40,10 @@ async function removeFile(file: string, options: ParsedOptions) {
     await options.fileStandard(file, options);
   } catch (reason) {
     if (options.ignoreErrors === false) {
-      return Promise.reject([{
+      throw [{
         path: file,
         reason,
-      }]);
+      }];
     }
   }
 

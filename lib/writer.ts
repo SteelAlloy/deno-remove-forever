@@ -29,12 +29,13 @@ export class FileWriter {
   static async write(fileData: FileData, data?: any) {
     const dest = await Deno.open(fileData.path, { write: true });
     const { getValues } = this;
+    let { size } = fileData;
 
     const src: Deno.Reader = {
       read(p: Uint8Array): Promise<number | null> {
         return new Promise((resolve) => {
-          const length = Math.min(p.byteLength, fileData.size);
-          fileData.size -= length;
+          const length = Math.min(p.byteLength, size);
+          size -= length;
 
           if (length === 0) {
             resolve(null);
@@ -78,7 +79,7 @@ export class FileWriter {
     src.close();
 
     if (fileData.checksum.hex() !== checksum.hex()) {
-      return Promise.reject("Invalid checksum");
+      return new Error("Invalid checksum");
     }
   }
 }

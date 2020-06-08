@@ -9,10 +9,12 @@ import { remove } from "./lib/remove.ts";
 import { fileStandards, directoryStandards } from "./lib/standards.ts";
 import { logger } from "./lib/logger.ts";
 import {
+  bgWhite,
   bgGreen,
   bgYellow,
   bgRed,
   bgCyan,
+  green,
   red,
   bold,
   yellow,
@@ -72,7 +74,7 @@ const directoryStandard = commandOptions.standard
   : directoryStandards.forever;
 
 let completed = 0;
-let deleted = 0
+let deleted = 0;
 const progress = setProgressBar();
 progress.render(completed);
 
@@ -81,30 +83,38 @@ setLogger();
 try {
   await run();
 } catch (err) {
-  if (!Array.isArray(err)) {
+  if (Array.isArray(err) === false) {
     progress.console(printError(err));
     AnsiEscape.from(Deno.stdout).eraseLine();
   }
-  if (!commandOptions.ignoreErrors) {
+  if (commandOptions.ignoreErrors === false) {
     Deno.exit(1);
   }
 }
 
 async function run() {
-  for (let i = 0; i < commandArgs[0].length; i++) {
-    const root = commandArgs[0][i];
+  const paths = commandArgs[0];
 
-    const deleted = await remove(
-      root,
-      {
-        fileStandard: fileStandard.remove,
-        directoryStandard: directoryStandard.remove,
-        retries: commandOptions.retries,
-        ignoreErrors: commandOptions.ignoreErrors,
-      },
-    );
-    console.log(`Deleted ${deleted} files.`);
+  const tasks = paths.map((path) =>
+    remove(path, {
+      fileStandard: fileStandard.remove,
+      directoryStandard: directoryStandard.remove,
+      retries: commandOptions.retries,
+      ignoreErrors: commandOptions.ignoreErrors,
+    })
+  );
+
+  const results = await Promise.allSettled(tasks);
+
+  const rejected: PromiseRejectedResult[] = <unknown> results.filter((result) =>
+    result.status === "rejected"
+  ) as PromiseRejectedResult[];
+
+  if (rejected[0] && Array.isArray(rejected[0].reason) === false) {
+    throw `${rejected[0].reason}: ${paths[0]}`;
   }
+
+  console.log(`Deleted ${deleted} objects.`);
 }
 
 async function getTotal() {
@@ -112,6 +122,7 @@ async function getTotal() {
   let directoryCount = 0;
   const fileMap: ObjectMap = {};
   const directoryMap: ObjectMap = {};
+
   for (let i = 0; i < commandArgs[0].length; i++) {
     const root = commandArgs[0][i];
     let fileInfo;
@@ -119,7 +130,7 @@ async function getTotal() {
     try {
       fileInfo = await Deno.stat(root);
     } catch (err) {
-      console.log(bold(bgRed(" ERROR ") + red(` ${err}`)));
+      console.log(bold(bgRed(" ERROR ") + red(` ${err}: ${root}`)));
       Deno.exit(1);
     }
 
@@ -133,7 +144,8 @@ async function getTotal() {
         directoryCount++;
       }
     } else {
-      fileMap[root] = 0; // ! potential issue: wrong path
+      fileMap[root] = 0;
+      fileCount++;
     }
   }
   return { fileMap, directoryMap, fileCount, directoryCount };
@@ -155,6 +167,15 @@ function setProgressBar() {
     total,
     clear: true,
     display: ":percent :bar :time :title",
+    preciseBar: [
+      bgWhite(green("▏")),
+      bgWhite(green("▎")),
+      bgWhite(green("▍")),
+      bgWhite(green("▌")),
+      bgWhite(green("▋")),
+      bgWhite(green("▊")),
+      bgWhite(green("▉")),
+    ],
   });
 }
 
@@ -164,10 +185,11 @@ function setLogger() {
       progress.console(printDebug(`${msg}: ${path}`));
     }
     progress.render(++completed);
+    getMap(object)[path]++;
   };
 
   logger.start = (path, object: string) => {
-    if (commandOptions.info) {
+    if (commandOptions.info || commandOptions.debug) {
       progress.console(printInfo(`Processed: ${path}`));
     }
     progress.render(++completed);
@@ -175,28 +197,30 @@ function setLogger() {
   };
 
   logger.info = (msg) => {
-    if (commandOptions.info) {
+    if (commandOptions.info || commandOptions.debug) {
       progress.console(printInfo(msg));
     }
   };
 
   logger.removed = (path, object: string) => {
-    if (commandOptions.info) {
+    if (commandOptions.info || commandOptions.debug) {
       progress.console(printInfo(`Successfully deleted ${path}`));
     }
     progress.render(++completed, {
       complete: bgGreen(" "),
-      title: `${++deleted} objects deleted`
+      title: `${++deleted} objects deleted`,
     });
     getMap(object)[path]++;
-
   };
 
   logger.warn = (path, object: string, reason) => {
     progress.console(printWarn(`${reason}: ${path}`));
   };
 
-  logger.warning = (path, object: string) => {
+  logger.warning = (path, object: string, reason) => {
+    if (commandOptions.info || commandOptions.debug) {
+      progress.console(printWarn(`${reason}: ${path}`));
+    }
     completed -= getMap(object)[path];
     progress.render(completed, {
       complete: bgYellow(" "),
@@ -246,7 +270,7 @@ function getMap(object: string) {
   }
 }
 
-type Arguments = [string];
+type Arguments = [string[]];
 
 type ObjectMap = {
   [key: string]: number;
