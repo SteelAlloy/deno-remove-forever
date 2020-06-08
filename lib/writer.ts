@@ -181,7 +181,7 @@ export class FileProperties {
   // ! Unstable
   // /** Reset file timestamps to `1970-01-01T00:00:00.000Z`. */
   static async resetTimestamps(fileData: FileData) {
-    logger.debug(fileData.path, "file", "ResetTimestamps called")
+    logger.debug(fileData.path, "file", "ResetTimestamps called");
     await Deno.utime(fileData.path, new Date(0), new Date(0));
   }
 
@@ -195,7 +195,7 @@ export class FileProperties {
       date2?: Date;
     } = {},
   ) {
-    logger.debug(fileData.path, "file", "ChangeTimestamps called")
+    logger.debug(fileData.path, "file", "ChangeTimestamps called");
     const date = new Date(randomValueBetween(date2.getTime(), date1.getTime()));
     await Deno.utime(fileData.path, date, date);
   }
@@ -227,7 +227,7 @@ export class DirectoryProperties {
   // ! Unstable
   /** Reset file timestamps to `1970-01-01T00:00:00.000Z`. */
   static async resetTimestamps(dirData: DirData) {
-    logger.debug(dirData.path, "dir", "ResetTimestamps called")
+    logger.debug(dirData.path, "dir", "ResetTimestamps called");
     await Deno.utime(dirData.path, new Date(0), new Date(0));
   }
 
@@ -241,7 +241,7 @@ export class DirectoryProperties {
       date2?: Date;
     } = {},
   ) {
-    logger.debug(dirData.path, "dir", "ChangeTimestamps called")
+    logger.debug(dirData.path, "dir", "ChangeTimestamps called");
     const date = new Date(randomValueBetween(date2.getTime(), date1.getTime()));
     await Deno.utime(dirData.path, date, date);
   }
