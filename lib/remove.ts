@@ -6,7 +6,11 @@ import { logger } from "./logger.ts";
  *
  * ```ts
  * await remove("/path/to/empty_dir/or/file");
- * await remove("/path/to/populated_dir/or/file", { standard: standards.schneier, ignoreErrors: true });
+ * await remove("/path/to/populated_dir/or/file", {
+ *   fileStandard: fileStandards.gutmann.remove,
+ *   directoryStandard: directoryStandards.unsafe.remove,
+ *   ignoreErrors: true
+ * });
  * ```
  * Default standard is `forever`.
  *

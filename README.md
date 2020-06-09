@@ -1,7 +1,7 @@
 <h1 align="center">
-  <img src="./images/logo.png" alt="secure-rm" width="25%">
+  <img src="./images/logo.png" alt="remove-forever" width="25%">
   <br>
-  <strong>remove-forever</strong>
+  <strong>Remove forever</strong>
   <br>
 </h1>
 <p align="center">Data erasure solution for files on deno 🦕</p>
@@ -17,7 +17,7 @@ Permanent data erasure goes beyond basic file deletion commands, which:
 
 ## 🔩 How It Works
 
-The basic principle is to write files before deletion in order to make recovery harder. With secure-rm, you get to choose the standard that follow your needs. Each one is composed of instructions about how many passes it should perform.
+The basic principle is to write files before deletion in order to make recovery harder. With remove-forever, you get to choose the standard that follow your needs. Each one is composed of instructions about how many passes it should perform.
 
 It goes from a simple pass of zeros to a 35 passes algorithm. Remove-forever comes with its own algorithm to ensure your data is safe:
 
@@ -31,11 +31,11 @@ It goes from a simple pass of zeros to a 35 passes algorithm. Remove-forever com
 Remove-forever is composed of two parts: a deno module with a straightforward API and a command line interface optimized to delete files on the fly.
 
 
-* [Choose your standard]()
-* [Create your own standard]()
-  * [on files]()
-  * [on directories]()
-* [Wipe disk (TODO)]()
+* [Choose your standard](#)
+* [Create your own standard](#)
+  * [on files](#)
+  * [on directories](#)
+* [Wipe disk (TODO)](#)
 
 <!-- ### 📚 [Documentation]() -->
 
@@ -44,15 +44,16 @@ Remove-forever is composed of two parts: a deno module with a straightforward AP
 [Deno](https://deno.land/#installation) required.
 
 ```shell
-deno install --allow-write --allow-read --unstable -n remove https://deno.land/x/remove-forever/cli.ts
+deno install --allow-write --allow-read --unstable -n remove https://deno.land/x/remove_forever/cli.ts
 ```
+> **Note**: Due to the use of `Deno.utime` and the confirmation request in the CLI, you will need to use the `--unstable` flag.
 
 ## 🚀 Quick Start
 
 If you want your application to delete specific files with a pass of cryptographically strong pseudo-random data, use one of these code snippets:
 
 ```ts
-import remove from "https://deno.land/x/remove-forever/mod.ts";
+import remove from "https://deno.land/x/remove_forever/mod.ts";
 
 await remove("./trash")
 await remove("./vault/secret.txt")
@@ -74,12 +75,12 @@ console.log(`Removed ${count} files and folders!`)
 
 ## 📜 Changelog / History
 
-See the [changelog](/CHANGELOG.md) or [releases](https://github.com/oganexon/remove-forever/releases).
+See the [changelog](/CHANGELOG.md) or [releases](https://github.com/oganexon/deno-remove-forever/releases).
 
 ## 🧾 Roadmap
 
-See the [open issues](https://github.com/oganexon/remove-forever/issues) and
-[project boards](https://github.com/oganexon/remove-forever/projects/) for a list of proposed features (and known issues). 
+See the [open issues](https://github.com/oganexon/deno-remove-forever/issues) and
+[project boards](https://github.com/oganexon/deno-remove-forever/projects/) for a list of proposed features (and known issues). 
 
 ## 🏗️ Contributing
 

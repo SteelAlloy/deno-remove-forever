@@ -1,5 +1,4 @@
-import { uuid, hash } from "./deps.ts";
-import * as path from "https://deno.land/std/path/mod.ts";
+import { uuid, hash, path } from "./deps.ts";
 import { logger } from "./logger.ts";
 
 export class FileWriter {

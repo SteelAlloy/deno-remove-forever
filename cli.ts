@@ -1,25 +1,14 @@
 #!/usr/bin/env -S deno run
 
-import { Command } from "https://deno.land/x/cliffy/command.ts";
-import { Confirm } from "https://deno.land/x/cliffy/prompt.ts";
-import { AnsiEscape } from "https://deno.land/x/cliffy/ansi-escape.ts";
-import ProgressBar from "https://deno.land/x/progress/mod.ts";
+import { Command } from "https://deno.land/x/cliffy@v0.9.0/packages/command/lib/command.ts";
+import { Confirm } from "https://deno.land/x/cliffy@v0.9.0/packages/prompt/prompts/confirm.ts";
+import { AnsiEscape } from "https://deno.land/x/cliffy@v0.9.0/packages/ansi-escape/lib/ansi-escape.ts";
+import * as fmt from "https://deno.land/std@v0.56.0/fmt/colors.ts";
+import ProgressBar from "https://deno.land/x/progress@v1.1.0/mod.ts";
 import { fs } from "./lib/deps.ts";
 import { remove } from "./lib/remove.ts";
 import { fileStandards, directoryStandards } from "./lib/standards.ts";
 import { logger } from "./lib/logger.ts";
-import {
-  bgWhite,
-  bgGreen,
-  bgYellow,
-  bgRed,
-  bgCyan,
-  green,
-  red,
-  bold,
-  yellow,
-  black,
-} from "https://deno.land/std@0.50.0/fmt/colors.ts";
 
 const { options: commandOptions, args: commandArgs } = await new Command<
   Options,
@@ -130,7 +119,7 @@ async function getTotal() {
     try {
       fileInfo = await Deno.stat(root);
     } catch (err) {
-      console.log(bold(bgRed(" ERROR ") + red(` ${err}: ${root}`)));
+      console.log(fmt.bold(fmt.bgRed(" ERROR ") + fmt.red(` ${err}: ${root}`)));
       Deno.exit(1);
     }
 
@@ -168,13 +157,13 @@ function setProgressBar() {
     clear: true,
     display: ":percent :bar :time :title",
     preciseBar: [
-      bgWhite(green("▏")),
-      bgWhite(green("▎")),
-      bgWhite(green("▍")),
-      bgWhite(green("▌")),
-      bgWhite(green("▋")),
-      bgWhite(green("▊")),
-      bgWhite(green("▉")),
+      fmt.bgWhite(fmt.green("▏")),
+      fmt.bgWhite(fmt.green("▎")),
+      fmt.bgWhite(fmt.green("▍")),
+      fmt.bgWhite(fmt.green("▌")),
+      fmt.bgWhite(fmt.green("▋")),
+      fmt.bgWhite(fmt.green("▊")),
+      fmt.bgWhite(fmt.green("▉")),
     ],
   });
 }
@@ -207,7 +196,7 @@ function setLogger() {
       progress.console(printInfo(`Successfully deleted ${path}`));
     }
     progress.render(++completed, {
-      complete: bgGreen(" "),
+      complete: fmt.bgGreen(" "),
       title: `${++deleted} objects deleted`,
     });
     getMap(object)[path]++;
@@ -223,7 +212,7 @@ function setLogger() {
     }
     completed -= getMap(object)[path];
     progress.render(completed, {
-      complete: bgYellow(" "),
+      complete: fmt.bgYellow(" "),
     });
     getMap(object)[path] = 0;
   };
@@ -231,7 +220,7 @@ function setLogger() {
   logger.error = (path, object: string, reason) => {
     progress.console(printError(`${reason}: ${path}`));
     progress.render(++completed, {
-      complete: bgRed(" "),
+      complete: fmt.bgRed(" "),
     });
     if (object === "file") {
       completed += fileStandard.stepsCount - getMap(object)[path];
@@ -242,19 +231,19 @@ function setLogger() {
 }
 
 function printError(msg: string) {
-  return bold(bgRed(" ERROR ") + red(` ${msg}`));
+  return fmt.bold(fmt.bgRed(" ERROR ") + fmt.red(` ${msg}`));
 }
 
 function printWarn(msg: string) {
-  return bold(bgYellow(black(" WARN "))) + yellow(`  ${msg}`);
+  return fmt.bold(fmt.bgYellow(fmt.black(" WARN "))) + fmt.yellow(`  ${msg}`);
 }
 
 function printDebug(msg: string) {
-  return bold(" DEBUG ") + ` ${msg}`;
+  return fmt.bold(" DEBUG ") + ` ${msg}`;
 }
 
 function printInfo(msg: string) {
-  return bold(bgCyan(" INFO ")) + `  ${msg}`;
+  return fmt.bold(fmt.bgCyan(" INFO ")) + `  ${msg}`;
 }
 
 function getMap(object: string) {

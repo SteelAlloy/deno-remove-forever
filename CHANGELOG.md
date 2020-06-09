@@ -17,5 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- - `` function to clear free space on drive.
 - `` function to properly format drive. -->
 
-## [1.0.0] - 2020-06-08
+## [1.0.0] - 2020-06-09
+
+First release
 

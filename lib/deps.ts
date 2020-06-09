@@ -1,12 +1,6 @@
-// import * as fs from "https://deno.land/std/fs/mod.ts";// ! Unstable
-import * as fs from "https://deno.land/std/fs/walk.ts"; // ! Unstable
-import * as path from "https://deno.land/std/path/mod.ts";
-import * as uuid from "https://deno.land/std/uuid/mod.ts";
-import * as hash from "https://deno.land/std/hash/sha256.ts"; // ! Unstable
+export * as fs from "https://deno.land/std@v0.56.0/fs/walk.ts";
+export * as path from "https://deno.land/std@v0.56.0/path/mod.ts";
+export * as hash from "https://deno.land/std@v0.56.0/hash/sha256.ts";
 
-export {
-  fs,
-  uuid,
-  hash,
-  path,
-};
+import * as v4 from "https://deno.land/std@v0.56.0/uuid/v4.ts";
+export const uuid = { v4 };
