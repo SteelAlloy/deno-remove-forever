@@ -14,7 +14,7 @@ const { options: commandOptions, args: commandArgs } = await new Command<
   Options,
   Arguments
 >()
-  .version("0.1.0")
+  .version("1.0.0")
   .description("Data erasure solution.\nDeletes files and folders forever...")
   .arguments("<path...:string>")
   .option(
