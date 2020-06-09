@@ -73,6 +73,12 @@ const count = await remove("./trash/secret.txt", {
 console.log(`Removed ${count} files and folders!`)
 ```
 
+<br/>
+<div align="center">
+  <img src="./images/cli.gif" alt="cli">
+  <img src="./images/help.png" alt="help">
+</div>
+
 ## 📜 Changelog / History
 
 See the [changelog](/CHANGELOG.md) or [releases](https://github.com/oganexon/deno-remove-forever/releases).
