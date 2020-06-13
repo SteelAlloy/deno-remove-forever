@@ -1,0 +1,13 @@
+{
+  "name": "remove-forever",
+  "description": "Data erasure solution for files on deno 🦕",
+  "stable": true,
+  "version": "0.1.4",
+  "files": [
+    "README.md",
+    "images/*",
+    "mod.ts",
+    "cli.ts",
+    "lib/*"
+  ]
+}
